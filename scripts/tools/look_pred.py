@@ -7,16 +7,17 @@ import argparse, glob, json, os, shutil, subprocess, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--write", action="store_true"); a = ap.parse_args()
-w = os.path.abspath(a.w)
+w = os.path.abspath(a.w); G = geo(w); SW, SH = G["SW"], G["SH"]; MW, MH = half(w)
 def rgb(p):
-    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", "fps=2997/100,scale=320:180", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
-    return np.frombuffer(r.stdout, np.uint8).reshape(-1, 180, 320, 3).astype(np.float32) / 255
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", f"fps={G['FPS_FF']},scale={SW}:{SH}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
+    return np.frombuffer(r.stdout, np.uint8).reshape(-1, SH, SW, 3).astype(np.float32) / 255
 R = rgb(glob.glob(f"{w}/ref/*.mp4")[0]); V = rgb(os.path.join(w, a.out))
 P = f"{w}/proj/src/shot_look.json"; cur = json.load(open(P))
 bak = json.load(open(P + ".bak_colorfit")) if os.path.exists(P + ".bak_colorfit") else {}
 lab = lambda x: cv2.cvtColor(np.uint8([[np.clip(x.reshape(-1, 3).mean(0) * 255, 0, 255)]]), cv2.COLOR_RGB2LAB)[0, 0].astype(float) * [100 / 255, 1, 1]
-gray = lambda x: cv2.resize(cv2.cvtColor((np.clip(x, 0, 1) * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY), (640, 360))
+gray = lambda x: cv2.resize(cv2.cvtColor((np.clip(x, 0, 1) * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY), (MW, MH))
 ch = 0
 for k, c in list(cur.items()):
     if "g" not in c: continue

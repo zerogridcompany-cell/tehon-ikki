@@ -9,15 +9,17 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
 from retime import rd, looks, post_f
-W, H, FPS = 1280, 720, 29.97
+import retime
+from geo import geo
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("cut"); ap.add_argument("--file"); ap.add_argument("--write", action="store_true")
 a = ap.parse_args(); w = os.path.abspath(a.w)
+retime.use_geo(w); GG = geo(w); W, H, FPS = GG["W"], GG["H"], GG["FPS"]  # 10/30 geo
 seg = [l for l in open(f"{w}/eye/segs.txt") if l.startswith(f"{a.cut}:")][0]
 s0, s1 = map(float, seg.split(":")[1].split("-")); f0, f1 = round(s0 * FPS), round(s1 * FPS)
 R = rd(glob.glob(f"{w}/ref/*.mp4")[0], sel=(f0, f1 - 1)); n = len(R)
 fp = a.file or f"{w}/cuts/{a.cut}.mp4"; C = rd(fp)[:n]
 LK = looks(w, f0, n)
-# 速さのため 640 で探す（ずれは 1280 の px に直す）
+# 速さのため半分の大きさで探す（ずれは手本の px に直す）
 q = 0.5; w2, h2 = int(W * q), int(H * q)
 Rg = [cv2.cvtColor(cv2.resize(r, (w2, h2), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY) for r in R]
 Cp = [cv2.resize(post_f(c, LK[i]), (w2, h2), interpolation=cv2.INTER_AREA) for i, c in enumerate(C)]
@@ -46,5 +48,5 @@ if a.write and best[0] > base + 0.002:
     out = np.stack([cv2.warpAffine(c, M, (W, H), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT) for c in Cf])
     cp = f"{w}/cuts/{a.cut}.mp4"
     if not os.path.exists(cp + ".bak_scan"): shutil.copy(cp, cp + ".bak_scan")
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", GG["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
     p.stdin.write(out.tobytes()); p.stdin.close(); p.wait(); print("書いた", cp)

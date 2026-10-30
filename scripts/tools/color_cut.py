@@ -9,9 +9,11 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
 from retime import rd, looks, post_f, pre_f
-FPS = 29.97
+import retime
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("render"); ap.add_argument("--ids", default=""); ap.add_argument("--write", action="store_true")
 a = ap.parse_args(); w = os.path.abspath(a.w)
+retime.use_geo(w); G = geo(w); FPS, W, H = G["FPS"], G["W"], G["H"]; MW, MH = half(w)
 ids = set(a.ids.split(",")) if a.ids else None
 RA = rd(glob.glob(f"{w}/ref/*.mp4")[0]); VA = rd(os.path.join(w, a.render))
 import json
@@ -22,9 +24,9 @@ def plate_cover(f0, f1):
         for f in range(max(f0, v["f0"]), min(f1, v["f1"] + 1)):
             if not any(o["f0"] <= f < o["f1"] and "green" in o["off"] for o in OFF): cov.add(f)
     return len(cov) / max(1, f1 - f0)
-lab = lambda x: cv2.cvtColor(cv2.resize(x, (160, 90), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2LAB).reshape(-1, 3).astype(np.float32).mean(0)
-g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360))
-txt = np.ones((720, 1280), bool); txt[300:420] = False
+lab = lambda x: cv2.cvtColor(cv2.resize(x, (G["SW"] // 2, G["SH"] // 2), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2LAB).reshape(-1, 3).astype(np.float32).mean(0)
+g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH))
+txt = np.ones((H, W), bool); txt[round(300 * H / 720):round(420 * H / 720)] = False  # 字幕の帯（r2 の 300〜420 行）は高さの比で移す
 for l in open(f"{w}/eye/segs.txt"):
     if ":" not in l: continue
     cut = l.split(":")[0].strip()
@@ -55,5 +57,5 @@ for l in open(f"{w}/eye/segs.txt"):
             q = np.clip(np.stack([p[..., c].astype(np.float32) * kb[c][0] + kb[c][1] for c in range(3)], -1), 0, 255)
             out[k] = pre_f(q, lk)
         if not os.path.exists(cp + ".bak_col"): shutil.copy(cp, cp + ".bak_col")
-        pp = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", "1280x720", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
+        pp = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", G["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
         pp.stdin.write(out.tobytes()); pp.stdin.close(); pp.wait()

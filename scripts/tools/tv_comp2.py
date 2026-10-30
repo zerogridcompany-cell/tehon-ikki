@@ -8,14 +8,16 @@ python3 tv_comp2.py <作業フォルダ> [--only 29,33] [--off 秒]
 - 字幕は白い画素を探して外す（1版は 300〜400 の帯）
 出す物：cuts/<番号>.mp4（前の物は cuts/<番号>_tv1.mp4 に控え）・_all.json（model tv_comp2）
 """
-import argparse, json, os, shutil, subprocess
+import argparse, json, os, shutil, subprocess, sys
 import cv2
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
 
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("--only"); ap.add_argument("--off", type=float, default=2876.7928 - 9.6)
 g = ap.parse_args()
-W, H, FPS = 1280, 720, 30000 / 1001
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from geo import geo
+_G = geo(g.w); W, H = _G["W"], _G["H"]  # 10/30 geo
+FPS, FPS_W = (30000 / 1001, "30000/1001") if abs(_G["FPS"] - 29.97) < 0.01 else (_G["FPS"], _G["FPS_FF"])  # 29.97 の手本は前のまま（30000/1001）
 E = {s["i"]: s for s in json.load(open(f"{g.w}/eye/out.json"))["shots"]}
 S = json.load(open(f"{g.w}/mg/tv/screens.json"))
 TR = {int(k): v for k, v in json.load(open(f"{g.w}/mg/tv/track.json")).items()}
@@ -169,7 +171,7 @@ for i in only:
     ci = fitc1([o[1] for o in outs], rs, [(cv2.erode((o[2] > 0.98).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0) & ~c for o, c in zip(outs, cms)])
     if os.path.exists(f"{g.w}/cuts/{i}.mp4") and not os.path.exists(f"{g.w}/cuts/{i}_tv1.mp4"):
         shutil.copy(f"{g.w}/cuts/{i}.mp4", f"{g.w}/cuts/{i}_tv1.mp4")
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "30000/1001",
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_W,
                           "-i", "-", "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", f"{g.w}/cuts/{i}.mp4"], stdin=subprocess.PIPE)
     ss = []
     for (bg, inner, sm), r in zip(outs, rs):

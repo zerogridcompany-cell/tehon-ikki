@@ -10,19 +10,21 @@ import cv2
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+from geo import geo, half
 
-W, H = 1280, 720
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
 FPS = 29.97
+FPS_FF = "2997/100"
 
 
 def read(p, ss, n):
-    o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0, ss):.4f}", "-i", p, "-frames:v", str(n), "-vf", f"fps=2997/100,scale={W}:{H}",
+    o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0, ss):.4f}", "-i", p, "-frames:v", str(n), "-vf", f"fps={FPS_FF},scale={W}:{H}",
                         "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True).stdout
     return np.frombuffer(o, np.uint8).reshape(-1, H, W, 3)
 
 
 def g(x, w=480):
-    return cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (w, w * 9 // 16))
+    return cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (w, w * H // W))
 
 
 def main():
@@ -30,10 +32,12 @@ def main():
     ap.add_argument("w"); ap.add_argument("--ids", required=True); ap.add_argument("--model", default="affine"); ap.add_argument("--smooth", type=int, default=5)
     ap.add_argument("--min", type=float, default=0.005); ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
+    global W, H, FPS, FPS_FF
+    G = geo(a.w); W, H, FPS, FPS_FF = G["W"], G["H"], G["FPS"], G["FPS_FF"]
     ref = glob.glob(f"{a.w}/ref/*.mp4")[0]
     shots = {str(s["i"]): s for s in json.load(open(f"{a.w}/eye/out.json"))["shots"]}
     MOT = cv2.MOTION_HOMOGRAPHY if a.model == "homog" else cv2.MOTION_AFFINE
-    m480 = np.ones((270, 480), np.uint8); m480[112:158] = 0
+    h480 = 480 * H // W; m480 = np.ones((h480, 480), np.uint8); m480[round(112 * h480 / 270):round(158 * h480 / 270)] = 0
     out = {}
     for i in a.ids.split(","):
         cp = f"{a.w}/cuts/{i}.mp4"
@@ -70,7 +74,7 @@ def main():
         before = np.mean([ssim(g(O[k], 640), g(R[k], 640)) for k in range(n)])
         NW = []
         for k in range(n):
-            # ECC の M は 手本の点 x → うちの点 M x ＝ 1280 では Si M S
+            # ECC の M は 手本の点 x → うちの点 M x ＝ 手本の大きさでは Si M S
             Mf = (Si @ As[k] @ S).astype(np.float32)
             NW.append(cv2.warpPerspective(O[k], Mf, (W, H), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REPLICATE))
         after = np.mean([ssim(g(NW[k], 640), g(R[k], 640)) for k in range(n)])
@@ -83,7 +87,7 @@ def main():
             if not os.path.exists(cp + ".bak_warp"):
                 shutil.copy(cp, cp + ".bak_warp")
             tmp = cp + ".tmp.mp4"
-            p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-",
+            p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF, "-i", "-",
                                   "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", tmp], stdin=subprocess.PIPE)
             p.stdin.write(np.stack(NW).tobytes()); p.stdin.close(); p.wait()
             shutil.move(tmp, cp)

@@ -11,12 +11,14 @@ import cv2
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+from geo import geo, half
 
-W, H, FPS = 320, 180, 29.97
+W, H, FPS = 320, 180, 29.97   # main で geo の SW・SH・FPS に替わる（10/30）
+FPS_FF = "2997/100"
 
 
 def rgb(p):
-    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", f"fps=2997/100,scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", f"fps={FPS_FF},scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
     return np.frombuffer(r.stdout, np.uint8).reshape(-1, H, W, 3).astype(np.float32) / 255
 
 
@@ -26,8 +28,9 @@ def lab(c):
 
 def de_secs(R, O):
     n = min(len(R), len(O)); out = []
-    for s in range(0, n, 30):
-        sl = slice(s, min(n, s + 30))
+    k = int(round(FPS))  # 1秒のコマ数（r2 は 30）
+    for s in range(0, n, k):
+        sl = slice(s, min(n, s + k))
         out.append(float(np.linalg.norm(lab(R[sl].reshape(-1, 3).mean(0)) - lab(O[sl].reshape(-1, 3).mean(0)))))
     return np.array(out)
 
@@ -39,10 +42,12 @@ def gray(x):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("vid"); ap.add_argument("--out", default="proj/src/shot_look.json")
     g = ap.parse_args()
+    global W, H, FPS, FPS_FF
+    G = geo(g.w); W, H, FPS, FPS_FF = G["SW"], G["SH"], G["FPS"], G["FPS_FF"]
     R = rgb(glob.glob(f"{g.w}/ref/*.mp4")[0]); O = rgb(g.vid); n = min(len(R), len(O)); R, O = R[:n], O[:n]
     shots = sorted(json.load(open(f"{g.w}/eye/out.json"))["shots"], key=lambda s: float(s["t0"]))
     oldp = f"{g.w}/proj/src/shot_look.json"; old = json.load(open(oldp))
-    band = np.ones((H, W), bool); band[int(300 / 4):int(420 / 4)] = False
+    band = np.ones((H, W), bool); band[int(300 * H / 720):int(420 * H / 720)] = False  # 字幕の帯（r2 の 300〜420 行）を高さの比で
     P = O.copy(); new = {}; used = 0
     for j, s in enumerate(shots):
         f0 = int(round(float(s["t0"]) * FPS)); f1 = int(round(float(shots[j + 1]["t0"]) * FPS)) if j + 1 < len(shots) else n

@@ -2,7 +2,7 @@
 python3 frame_index.py <動画…> --out tmp/frame_index.npz [--fps 2]
 query: python3 frame_index.py --query <作業> <手本のコマ> --index tmp/frame_index.npz [--top 11]
 """
-import argparse, glob, subprocess, sys
+import argparse, glob, os, subprocess, sys
 import cv2, numpy as np
 ap = argparse.ArgumentParser(); ap.add_argument("vids", nargs="*"); ap.add_argument("--out"); ap.add_argument("--fps", type=float, default=2)
 ap.add_argument("--query", nargs=2); ap.add_argument("--index", default="tmp/frame_index.npz"); ap.add_argument("--top", type=int, default=11); ap.add_argument("--flip", action="store_true")
@@ -11,17 +11,21 @@ def dsc(im):
     g = cv2.GaussianBlur(cv2.cvtColor(cv2.resize(im, (48, 27)), cv2.COLOR_BGR2GRAY).astype(np.float32), (0, 0), 0.8)
     g = (g - g.mean()) / (g.std() + 1e-6); return g.ravel(), cv2.resize(im, (4, 3)).astype(np.float32).ravel() / 255
 if a.query:
-    w, f = a.query[0], int(a.query[1]); Z = np.load(f"{w}/{a.index}", allow_pickle=True); meta, G, Cc = Z["meta"], Z["g"], Z["c"]
-    r = subprocess.run(["ffmpeg", "-v", "error", "-i", glob.glob(f"{w}/ref/*.mp4")[0], "-vf", f"fps=2997/100,select=eq(n\\,{f}),scale=640:360", "-vsync", "0", "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
-    im = np.frombuffer(r.stdout, np.uint8).reshape(360, 640, 3); g, c = dsc(im)
+    w, f = a.query[0], int(a.query[1])
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from geo import geo, half
+    GG = geo(w); SW, SH = GG["SW"], GG["SH"]; MW, MH = half(w)
+    Z = np.load(f"{w}/{a.index}", allow_pickle=True); meta, G, Cc = Z["meta"], Z["g"], Z["c"]
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", glob.glob(f"{w}/ref/*.mp4")[0], "-vf", f"fps={GG['FPS_FF']},select=eq(n\\,{f}),scale={MW}:{MH}", "-vsync", "0", "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
+    im = np.frombuffer(r.stdout, np.uint8).reshape(MH, MW, 3); g, c = dsc(im)
     sc = G @ g / g.size - 0.8 * np.abs(Cc - c).mean(1); fl = None
     if a.flip:
         gf, _ = dsc(im[:, ::-1]); scf = G @ gf / g.size - 0.8 * np.abs(Cc - c).mean(1); fl = scf > sc; sc = np.maximum(sc, scf)
-    idx = np.argsort(-sc)[: a.top]; cells = [cv2.resize(im, (320, 180))]
+    idx = np.argsort(-sc)[: a.top]; cells = [cv2.resize(im, (SW, SH))]
     for i in idx:
         v, t = meta[i]
-        rr = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", v, "-frames:v", "1", "-vf", "scale=320:180", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True).stdout
-        cc = np.frombuffer(rr, np.uint8).reshape(180, 320, 3).copy() if len(rr) == 320 * 180 * 3 else np.zeros((180, 320, 3), np.uint8)
+        rr = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", v, "-frames:v", "1", "-vf", f"scale={SW}:{SH}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True).stdout
+        cc = np.frombuffer(rr, np.uint8).reshape(SH, SW, 3).copy() if len(rr) == SW * SH * 3 else np.zeros((SH, SW, 3), np.uint8)
         if fl is not None and fl[i]: cc = cc[:, ::-1].copy()
         cv2.putText(cc, f"{len(cells)} {v.split('/')[-1][:12]} {t:.1f}s {sc[i]:.2f}{' F' if fl is not None and fl[i] else ''}", (4, 14), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1); cells.append(cc)
         print(len(cells) - 1, v, round(float(t), 1), round(float(sc[i]), 3), "反転" if fl is not None and fl[i] else "")

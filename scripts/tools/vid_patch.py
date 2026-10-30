@@ -3,16 +3,18 @@
 python3 vid_patch.py <作業> <カット番号> <元の動画> <窓の始め秒> <窓の終わり秒> --frames 953-954 [--flip] [--min 0.01]
 - 元の窓を 480 幅の白黒で全部読む → 手本のコマ（字幕の帯を外す）と SIFT → 目印の多い上位 4 コマ → ECC（拡大・移動・回転）で詰める
 - 選んだコマだけ元の大きさで読み直して重ね、色はチャンネルごとの1次で手本に合わせ、ぼかし 0〜2 の良い方
-- 今のコマより SSIM（白黒 640x360）が --min 以上上がった時だけ入れる。前の物は .bak_vp に控え
+- 今のコマより SSIM（白黒・手本の半分＝r2 は 640x360）が --min 以上上がった時だけ入れる。前の物は .bak_vp に控え
 """
 import argparse, json, os, shutil, subprocess, sys
 import cv2
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+from geo import geo, half
 
-W, H = 1280, 720
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
 FPS = 29.97
+FPS_FF, MW, MH, RH = "2997/100", 640, 360, 270   # RH＝手本を 480 幅にした時の高さ
 
 
 def probe(p):
@@ -20,7 +22,8 @@ def probe(p):
     return int(o[0]), int(o[1])
 
 
-def read(p, ss, d, w, h, fmt="gray", fps="2997/100"):
+def read(p, ss, d, w, h, fmt="gray", fps=None):
+    fps = fps or FPS_FF
     ch = 1 if fmt == "gray" else 3
     o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{ss:.4f}", "-t", f"{d:.4f}", "-i", p, "-vf", f"fps={fps},scale={w}:{h}",
                         "-f", "rawvideo", "-pix_fmt", "gray" if ch == 1 else "bgr24", "-"], capture_output=True).stdout
@@ -39,7 +42,7 @@ def ssim_m(a, b, m):
 
 
 def g640(x):
-    return cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360))
+    return cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH))
 
 
 def main():
@@ -48,6 +51,8 @@ def main():
     ap.add_argument("--frames", required=True); ap.add_argument("--flip", action="store_true"); ap.add_argument("--min", type=float, default=0.01)
     ap.add_argument("--offset", type=float, default=None, help="元の秒＝手本の秒＋offset で決め打ち（目印が取れん噴煙・暗い絵）。前後1コマと重ね方なし（ECC だけ）も候補に")
     g = ap.parse_args()
+    global W, H, FPS, FPS_FF, MW, MH, RH
+    G = geo(g.w); W, H, FPS, FPS_FF = G["W"], G["H"], G["FPS"], G["FPS_FF"]; MW, MH = half(g.w); RH = round(480 * H / W)
     import glob
     ref = glob.glob(f"{g.w}/ref/*.mp4")[0]
     shot = [s for s in json.load(open(f"{g.w}/eye/out.json"))["shots"] if str(s["i"]) == g.i][0]
@@ -66,11 +71,11 @@ def main():
     fs = [sift.detectAndCompute(x, None) for x in S]
     print("元のコマ", len(S), flush=True)
     f0, f1 = map(int, g.frames.split("-"))
-    txt = np.ones((270, 480), np.uint8); txt[112:158] = 0  # 字幕の帯（300〜420/720）
+    txt = np.ones((RH, 480), np.uint8); txt[round(112 * RH / 270):round(158 * RH / 270)] = 0  # 字幕の帯（300〜420/720＝高さの比）
     changed = False
     for f in range(f0, f1 + 1):
         R = read(ref, max(0, f - 0.3) / FPS, 1 / FPS, W, H, "bgr")[0]
-        rg = cv2.resize(cv2.cvtColor(R, cv2.COLOR_BGR2GRAY), (480, 270))
+        rg = cv2.resize(cv2.cvtColor(R, cv2.COLOR_BGR2GRAY), (480, RH))
         kr, dr = sift.detectAndCompute(rg, txt)
         cand = []
         for j, (kc, dc) in enumerate(fs):
@@ -85,33 +90,33 @@ def main():
         cand.sort(key=lambda x: -x[0])
         if g.offset is not None:
             jc = int(round((f / FPS + g.offset - g.a) * FPS))
-            I = np.float32([[1, 0, 0], [0, 270 / h480, 0]]) if abs(270 / h480 - 1) > 0.01 else np.float32([[1, 0, 0], [0, 1, 0]])
+            I = np.float32([[1, 0, 0], [0, RH / h480, 0]]) if abs(RH / h480 - 1) > 0.01 else np.float32([[1, 0, 0], [0, 1, 0]])
             cand = [(0, j, I.copy()) for j in (jc - 1, jc, jc + 1) if 0 <= j < len(S)] + cand[:2]
         # 背景だけで目印が当たると顔の向きが違うコマを選ぶ＝一番の A で全コマを重ねて SSIM の上位も足す
         if cand and g.offset is None:
-            A0 = cand[0][2]; mk = cv2.warpAffine(np.ones_like(S[0]), A0, (480, 270)) > 0
+            A0 = cand[0][2]; mk = cv2.warpAffine(np.ones_like(S[0]), A0, (480, RH)) > 0
             mk &= txt > 0
             sc = []
             for j in range(len(S)):
-                sc.append((ssim_m(cv2.warpAffine(S[j], A0, (480, 270)), rg, mk), j))
+                sc.append((ssim_m(cv2.warpAffine(S[j], A0, (480, RH)), rg, mk), j))
             sc.sort(reverse=True)
             seen = {c[1] for c in cand[:4]}
             cand = cand[:4] + [(0, j, A0.copy()) for _, j in sc[:6] if j not in seen]
         best = (-1, None, None)
         for inl, j, A in cand:
             try:
-                _, D = cv2.findTransformECC(rg.astype(np.float32), cv2.warpAffine(S[j], A, (480, 270)).astype(np.float32), np.eye(2, 3, dtype=np.float32), cv2.MOTION_AFFINE,
+                _, D = cv2.findTransformECC(rg.astype(np.float32), cv2.warpAffine(S[j], A, (480, RH)).astype(np.float32), np.eye(2, 3, dtype=np.float32), cv2.MOTION_AFFINE,
                                             (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 60, 1e-5), None, 3)
                 A = (np.linalg.inv(np.vstack([D, [0, 0, 1]])) @ np.vstack([A, [0, 0, 1]]))[:2]
             except cv2.error:
                 pass
-            # 元の大きさで読み直す（480 幅の A → 元 → 1280）
+            # 元の大きさで読み直す（480 幅の A → 元 → 手本の大きさ）
             full = read(g.src, g.a + j / FPS, 1 / FPS, sw, sh, "bgr")[0]
             if g.flip:
                 full = full[:, ::-1].copy()
             Af = (np.diag([W / 480, W / 480, 1.0]) @ np.vstack([A, [0, 0, 1]]) @ np.diag([480 / sw, 480 / sw, 1.0]))[:2].astype(np.float32)
             wc = cv2.warpAffine(full, Af, (W, H)); cv = cv2.warpAffine(np.ones((sh, sw), np.uint8), Af, (W, H)) > 0
-            m = cv.copy(); m[300:420] = False
+            m = cv.copy(); m[round(300 * H / 720):round(420 * H / 720)] = False
             fit = wc.astype(np.float32)
             if m.sum() > 1000:
                 for c in range(3):
@@ -144,7 +149,7 @@ def main():
         if os.path.exists(cp) and not os.path.exists(cp + ".bak_vp"):
             shutil.copy(cp, cp + ".bak_vp")
         tmp = cp + ".tmp.mp4"
-        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-",
+        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF, "-i", "-",
                               "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", tmp], stdin=subprocess.PIPE)
         p.stdin.write(cur.tobytes()); p.stdin.close(); p.wait()
         shutil.move(tmp, cp)

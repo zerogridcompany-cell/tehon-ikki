@@ -71,6 +71,8 @@ esac
 W="$(cd "$1" && pwd)" || exit 1; L="$W/ikki_loop.log"
 [ -f "$W/決め.md" ] || { echo "🔴 $W/決め.md が無い。実写の埋め方・字の書体などを本人に決めてもらって書いてから回す（SKILL.md「先に決めてもらう事」）"; exit 1; }
 ls "$W"/ref/*.mp4 >/dev/null 2>&1 || { echo "🔴 $W/ref/ に手本が無い。先に run.sh init <手本.mp4> $W"; exit 1; }
+# 🔒10/30 つなぎ：段0 の図鑑が無いまま作る段に入らん（手本は1回だけ見る）
+[ -f "$W/zukan/zukan.json" ] || bash "$HERE/run.sh" miru "$(ls "$W"/ref/*.mp4 | head -1)" "$W" || { echo "🔴 段0 見る が門を通らん＝回さん"; exit 1; }
 mkdir "$W/.ikki_lock" 2>/dev/null || { echo "🔴 この作業フォルダはもう回っとる（$W/.ikki_lock を見る。落ちた後なら消してから）"; exit 1; }
 trap 'rmdir "$W/.ikki_lock" 2>/dev/null' EXIT
 rm -f "$W/IKKI_END"

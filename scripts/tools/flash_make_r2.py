@@ -1,8 +1,9 @@
 # 白く光るコマを、うちの絵（字幕を外して書き出した物）を反転・色合わせして作る。手本とは SSIM で比べて元のコマを選ぶだけ（手本の絵は入れん）
-import sys, json, subprocess, numpy as np, cv2
-sys.path.insert(0, '../tools')
+import os, sys, json, subprocess, numpy as np, cv2
+sys.path.insert(0, '../tools'); sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
-W, H = 1280, 720
+from geo import geo, half
+W, H = geo(".")["W"], geo(".")["H"]; MW, MH = half(".")  # 作業フォルダ（r2）で回す前提（10/30 geo）
 def rd(p):
     r = subprocess.run(["ffmpeg","-v","error","-i",p,"-vf",f"scale={W}:{H}","-vsync","0","-f","rawvideo","-pix_fmt","bgr24","-"],capture_output=True)
     return np.frombuffer(r.stdout,np.uint8).reshape(-1,H,W,3)
@@ -10,7 +11,7 @@ R = rd('ref/r2.mp4')
 B = {}
 for a, b in ((528, 545), (1726, 1736), (1782, 1790)):
     for i, im in enumerate(rd(f'tmp/nocap_{a}-{b}.mp4')): B[a + i] = im
-g = lambda a: cv2.resize(cv2.cvtColor(a, cv2.COLOR_BGR2GRAY), (640, 360))
+g = lambda a: cv2.resize(cv2.cvtColor(a, cv2.COLOR_BGR2GRAY), (MW, MH))
 def colfit(img, ref):
     o = img.astype(np.float32).copy()
     for c in range(3):

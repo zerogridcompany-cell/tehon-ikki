@@ -8,11 +8,13 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
 from retime import rd, looks, post_f
-FPS = 29.97
+import retime
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--ids"); ap.add_argument("--write", action="store_true")
 a = ap.parse_args(); w = os.path.abspath(a.w)
+retime.use_geo(w); G = geo(w); FPS = G["FPS"]; MW, MH = half(w)
 ids = a.ids.split(",") if a.ids else None
-g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360), interpolation=cv2.INTER_AREA)
+g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH), interpolation=cv2.INTER_AREA)
 for l in open(f"{w}/eye/segs.txt"):
     c, t = l.strip().split(":")
     if ids and c not in ids: continue
@@ -37,5 +39,5 @@ for l in open(f"{w}/eye/segs.txt"):
     if a.write and ok:
         if not os.path.exists(cp + ".bak_chroma"): shutil.copy(cp, cp + ".bak_chroma")
         full = rd(cp).copy(); full[:n] = np.stack(out)
-        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
+        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", G["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
         p.stdin.write(full.tobytes()); p.stdin.close(); p.wait()

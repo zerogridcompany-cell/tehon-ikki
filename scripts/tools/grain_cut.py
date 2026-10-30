@@ -8,9 +8,11 @@ import argparse, glob, os, shutil, subprocess, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from retime import rd
-FPS = 29.97
+import retime
+from geo import geo
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--ids"); ap.add_argument("--write", action="store_true")
 a = ap.parse_args(); w = os.path.abspath(a.w)
+retime.use_geo(w); GG = geo(w); FPS, W, H = GG["FPS"], GG["W"], GG["H"]
 cr, co = cv2.VideoCapture(glob.glob(f"{w}/ref/*.mp4")[0]), cv2.VideoCapture(os.path.join(w, a.out))
 
 
@@ -41,7 +43,7 @@ for l in open(f"{w}/eye/segs.txt"):
     if os.path.exists(cp + ".bak_grain"): print(c, "もう足してある＝飛ばす"); continue
     C = rd(cp); rng = np.random.default_rng(int(c) * 7 + 1)
     # σ0.6 でならすと散らばりが下がる＝先に測って倍率で戻す
-    z = cv2.GaussianBlur(rng.standard_normal((720, 1280)).astype(np.float32), (0, 0), 0.6); kz = 1 / z.std()
+    z = cv2.GaussianBlur(rng.standard_normal((H, W)).astype(np.float32), (0, 0), 0.6); kz = 1 / z.std()
     # hp（σ2 との差）で測ると σ0.6 の粒は約 0.93 倍に見える
     amp = add / 0.93
     out = []
@@ -50,6 +52,6 @@ for l in open(f"{w}/eye/segs.txt"):
         nc = cv2.GaussianBlur(rng.standard_normal(f.shape).astype(np.float32), (0, 0), 0.6) * kz * amp * 0.3
         out.append(np.clip(f.astype(np.float32) + n1[..., None] + nc, 0, 255).astype(np.uint8))
     if not os.path.exists(cp + ".bak_grain"): shutil.copy(cp, cp + ".bak_grain")
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", "1280x720", "-r", "2997/100", "-i", "-",
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", GG["FPS_FF"], "-i", "-",
                           "-c:v", "libx264", "-crf", "8", "-tune", "grain", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
     p.stdin.write(np.array(out).tobytes()); p.stdin.close(); p.wait()

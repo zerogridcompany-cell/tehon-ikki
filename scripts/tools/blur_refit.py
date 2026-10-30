@@ -7,13 +7,15 @@ import argparse, json, os, shutil, subprocess, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import frames, ssim
+import cut_score
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--min", type=float, default=0.004); ap.add_argument("--write", action="store_true")
-a = ap.parse_args(); w = os.path.abspath(a.w)
+a = ap.parse_args(); w = os.path.abspath(a.w); cut_score.use_geo(w); FPS = geo(w)["FPS"]
 R = frames(glob.glob(f"{w}/ref/*.mp4")[0]); V = frames(os.path.join(w, a.out)); n = min(len(R), len(V))
 segs = []
 for l in open(f"{w}/eye/segs.txt"):
     if ":" in l:
-        k, v = l.split(":"); s0, s1 = map(float, v.split("-")); segs.append((k.strip(), round(s0 * 29.97), min(n, round(s1 * 29.97))))
+        k, v = l.split(":"); s0, s1 = map(float, v.split("-")); segs.append((k.strip(), round(s0 * FPS), min(n, round(s1 * FPS))))
 SL = json.load(open(f"{w}/proj/src/shot_look.json")); tot = 0; ch = []
 for k, f0, f1 in segs:
     if f1 - f0 < 2: continue

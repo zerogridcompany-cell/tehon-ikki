@@ -23,10 +23,18 @@ for i in range(1, len(Y)):
     if s[i] > 0.3 and i - cuts[-1] >= 3:
         cuts.append(i)
 cuts.append(len(Y))
+# 🔒10/30 つなぎ：段0 の図鑑があれば、カットは図鑑の物（コマぴったり・秒は pts）。scene 0.3 だけやと mm4u で 24 中 14 しか取れんかった
+zp = f"{w}/zukan/zukan.json"; Z = json.load(open(zp)) if os.path.exists(zp) else None
+if Z:
+    cuts = [c["f0"] for c in Z["cuts"]] + [Z["cuts"][-1]["f1"]]   # fps は ffprobe の r_frame_rate のまま（Remotion の fps＝30 や 29.97。pts の 30.0003 は使わん）
+    print("カット＝図鑑（zukan.json）", len(Z["cuts"]))
+else:
+    print("🟡 図鑑が無い＝scene 0.3 で分けた（先に run.sh miru）")
 e = f"{w}/eye"; os.makedirs(f"{e}/sheets", exist_ok=True); os.makedirs(f"{e}/k", exist_ok=True)
 with open(f"{e}/segs.txt", "w") as fo:
     for j in range(len(cuts) - 1):
-        fo.write(f"{j}: {cuts[j] / fps:.3f}-{cuts[j + 1] / fps:.3f}\n")
+        if Z: fo.write(f"{j}: {Z['cuts'][j]['t0']:.3f}-{Z['cuts'][j]['t1']:.3f}\n")
+        else: fo.write(f"{j}: {cuts[j] / fps:.3f}-{cuts[j + 1] / fps:.3f}\n")
 for j in range(len(cuts) - 1):
     mid = (cuts[j] + cuts[j + 1]) // 2
     subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", ref, "-vf", f"select=eq(n\\,{mid}),scale=480:-2", "-vsync", "0", "-frames:v", "1", f"{e}/k/k{j:03d}.png"])
@@ -37,5 +45,5 @@ for g0 in range(0, len(ks), 12):
 tpl = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references", "eye_task.md")).read()
 open(f"{e}/task.md", "w").write(tpl.replace("__REF__", os.path.basename(ref)).replace("__W__", str(W)).replace("__H__", str(H))
                                  .replace("__FPS__", f"{fps:.3f}").replace("__SEC__", f"{len(Y) / fps:.1f}"))
-json.dump({"frames": int(len(Y)), "fps": fps, "width": W, "height": H}, open(f"{w}/cfg.json", "w"))
+json.dump({"frames": int(Z["meta"]["frames"] if Z else len(Y)), "fps": fps, "width": W, "height": H}, open(f"{w}/cfg.json", "w"))
 print("カット", len(cuts) - 1, "コマ", len(Y), f"{W}x{H} {fps:.3f}fps → {e}/")

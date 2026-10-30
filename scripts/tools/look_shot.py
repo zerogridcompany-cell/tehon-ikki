@@ -1,14 +1,14 @@
 """look_shot.py <作業> <うち.mp4> [--out proj/src/shot_look.json]  場面ごとの見た目（51 の shot_color・lum_shot・blur_shot2 の汎用版）。
-カット（eye/out.json の t0〜t1）ごとに、手本とうちを 320x180 で 8コマ測って：
+カット（eye/out.json の t0〜t1）ごとに、手本とうちを geo の SW x SH（r2 は 320x180）で 8コマ測って：
   色＝チャンネルごとのゲイン（幅の比 0.75〜1.33）＋オフセット（平均を手本へ）＝明るさもここで合う
-  やわらかさ＝ぼかしの強さ σ（1280 幅の px）を 0〜4 から SSIM が一番高い物
+  やわらかさ＝ぼかしの強さ σ（手本の画素・r2 は 1280 幅の px）を 0〜4 から SSIM が一番高い物
 採る条件：色＝ΔE が 0.5 以上下がって SSIM が 0.002 より下がらん時だけ／ぼかし＝SSIM が 0.003 より上がる時だけ。
 黒いまま（うちの明るさ 4 未満）のカットは触らん。
 前の shot_look.json があれば重ねる（色＝g·(g0·x＋o0)＋o・ぼかし＝√(σ0²＋σ²)）＝書き出し→測る→書き出し を何回でも回せる。
 出す物：{"<カット番号>": {"f0","f1","g":[r,g,b],"o":[r,g,b](0〜1),"blur":σ}} → R2.tsx（Main）が全部の層の上にかける。
 🔴 SVG の feColorMatrix は color-interpolation-filters="sRGB" を付ける（無いと linearRGB で計算されて色がずれる）
 """
-import argparse, glob, json, subprocess
+import argparse, glob, json, os, subprocess, sys
 import cv2
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
@@ -16,7 +16,9 @@ from skimage.metrics import structural_similarity as ssim
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("mine"); ap.add_argument("--out", default="proj/src/shot_look.json")
 a = ap.parse_args()
 ref = glob.glob(f"{a.w}/ref/*.mp4")[0]
-W, H = 320, 180
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+G = geo(a.w); W, H = G["SW"], G["SH"]  # 10/30 geo
 
 
 def frames(p):
@@ -38,7 +40,7 @@ def score(R, O):
 
 
 RF, OF = frames(ref), frames(a.mine)
-n = min(len(RF), len(OF)); fps = 29.97
+n = min(len(RF), len(OF)); fps = G["FPS"]
 shots = json.load(open(f"{a.w}/eye/out.json"))["shots"]
 import os
 OLD = json.load(open(f"{a.w}/{a.out}")) if os.path.exists(f"{a.w}/{a.out}") else {}
@@ -61,7 +63,7 @@ for s in shots:
         base, sb = O, s0
     best = (sb, 0.0)
     for sg in (0.5, 1, 1.5, 2, 3, 4):
-        k = sg * W / 1280
+        k = sg * W / G["W"]
         B = np.stack([cv2.GaussianBlur(b, (0, 0), k) for b in base]).astype(np.uint8)
         sc = score(R.astype(np.uint8), B)
         if sc > best[0]: best = (sc, sg)

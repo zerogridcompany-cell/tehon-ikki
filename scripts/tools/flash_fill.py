@@ -3,32 +3,37 @@
 python3 flash_fill.py <作業> --frames 1715,1716,1717,1727 [--grid 16x9] [--min 0.02]
 - 🔴 中身のある絵（写真・人・物）には使わん＝手本のぼかし写しになるだけで作り直しやない（10/27 v35 で 153・180・528・1727・2162 に入って戻した）
 - 門＝細かさ（16x9 に縮めて戻した時の差）が 5 未満、かつ 40x40 のどの升目でも細かい形（ぼかしとの差の平均）が 4 未満（小さい物が1つでも写っとったら外す）
-- 入れる先は eye/out.json でそのコマを含むカットの cuts/<番号>.mp4（無ければ黒から作る）。SSIM（白黒 640x360）が --min 以上上がった時だけ
+- 入れる先は eye/out.json でそのコマを含むカットの cuts/<番号>.mp4（無ければ黒から作る）。SSIM（白黒・手本の半分＝r2 は 640x360）が --min 以上上がった時だけ
 """
 import argparse, glob, json, os, shutil, subprocess, sys
 import cv2
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+from geo import geo, half
 
-W, H = 1280, 720
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
 FPS = 29.97
+FPS_FF, MW, MH = "2997/100", 640, 360
 
 
 def read(p, ss, n):
-    o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0, ss):.4f}", "-i", p, "-frames:v", str(n), "-vf", f"fps=2997/100,scale={W}:{H}",
+    o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0, ss):.4f}", "-i", p, "-frames:v", str(n), "-vf", f"fps={FPS_FF},scale={W}:{H}",
                         "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True).stdout
     return np.frombuffer(o, np.uint8).reshape(-1, H, W, 3)
 
 
 def g640(x):
-    return cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360))
+    return cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH))
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("w"); ap.add_argument("--frames", required=True); ap.add_argument("--grid", default="16x9"); ap.add_argument("--min", type=float, default=0.02)
+    ap.add_argument("w"); ap.add_argument("--frames", required=True); ap.add_argument("--grid", help="既定＝横長 16x9・縦長 9x16（手本の比）"); ap.add_argument("--min", type=float, default=0.02)
     a = ap.parse_args()
+    global W, H, FPS, FPS_FF, MW, MH
+    G = geo(a.w); W, H, FPS, FPS_FF = G["W"], G["H"], G["FPS"], G["FPS_FF"]; MW, MH = half(a.w)
+    if not a.grid: a.grid = f"16x{round(16 * H / W)}" if W >= H else f"{round(16 * W / H)}x16"
     gw, gh = map(int, a.grid.split("x"))
     ref = glob.glob(f"{a.w}/ref/*.mp4")[0]
     shots = json.load(open(f"{a.w}/eye/out.json"))["shots"]
@@ -48,7 +53,7 @@ def main():
             cache[i] = [F, False]
         F = cache[i][0]
         now = ssim(g640(F[f - c0]), g640(R)); new = ssim(g640(fill), g640(R))
-        gy = cv2.cvtColor(R, cv2.COLOR_BGR2GRAY).astype(np.float32); gy[300:420] = gy[300:420].mean()  # 字幕の帯は MG の字＝外す
+        gy = cv2.cvtColor(R, cv2.COLOR_BGR2GRAY).astype(np.float32); y0, y1 = round(300 * H / 720), round(420 * H / 720); gy[y0:y1] = gy[y0:y1].mean()  # 字幕の帯は MG の字＝外す（r2 の 300〜420 行を高さの比で）
         hf = np.abs(gy - cv2.GaussianBlur(gy, (0, 0), 6))  # 細かい形（物・人・字）だけが残る
         blk = max(float(hf[y:y + 40, x:x + 40].mean()) for y in range(0, H, 40) for x in range(0, W, 40))
         ok = new > now + a.min and detail < 5 and blk < 4
@@ -62,7 +67,7 @@ def main():
         if os.path.exists(cp) and not os.path.exists(cp + ".bak_flash"):
             shutil.copy(cp, cp + ".bak_flash")
         tmp = cp + ".tmp.mp4"
-        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-",
+        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF, "-i", "-",
                               "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", tmp], stdin=subprocess.PIPE)
         p.stdin.write(F.tobytes()); p.stdin.close(); p.wait()
         shutil.move(tmp, cp); print("書いた", cp)

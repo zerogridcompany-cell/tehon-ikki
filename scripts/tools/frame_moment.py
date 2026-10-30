@@ -8,9 +8,11 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
 from retime import rd, looks, post_f
-FPS = 29.97
+import retime
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("cut"); ap.add_argument("--write", action="store_true"); ap.add_argument("--from", dest="jfrom", type=int, default=0, help="このコマ（カットの中の番号）から合わせる。前のコマは今の色をそのまま焼く（切り替えの途中で中身が違うコマ）")
 a = ap.parse_args(); w = os.path.abspath(a.w); c = a.cut
+retime.use_geo(w); GG = geo(w); FPS = GG["FPS"]; MW, MH = half(w)
 seg = [l for l in open(f"{w}/eye/segs.txt") if l.startswith(f"{c}:")][0]
 s0, s1 = map(float, seg.split(":")[1].split("-")); f0, f1 = round(s0 * FPS), round(s1 * FPS)
 R = rd(glob.glob(f"{w}/ref/*.mp4")[0], sel=(f0, f1 - 1)); n = len(R); LK = looks(w, f0, n); cp = f"{w}/cuts/{c}.mp4"; C = rd(cp)[:n]
@@ -26,7 +28,7 @@ for j in range(n):
 out = np.stack(out)
 L = json.load(open(f"{w}/proj/src/shot_look.json")); lk = dict(L.get(c, {"f0": f0, "f1": f1 - 1})); blur = lk.get("blur", 0)
 LK2 = [(np.ones(3, np.float32), np.zeros(3, np.float32), blur, *x[3:]) if isinstance(x, tuple) else x for x in LK]
-g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360), interpolation=cv2.INTER_AREA)
+g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH), interpolation=cv2.INTER_AREA)
 sb = np.mean([ssim(g(R[j]), g(post_f(C[j], LK[j]))) for j in range(n)])
 # 色の設定を外した形で比べる（ぼかしだけ残す）
 pf = lambda x: cv2.GaussianBlur(x, (0, 0), blur) if blur else x
@@ -34,7 +36,7 @@ sa = np.mean([ssim(g(R[j]), g(pf(out[j]))) for j in range(n)])
 print(f"カット {c}：点 {sb:.4f} → {sa:.4f}")
 if a.write and sa > sb:
     shutil.copy(cp, cp + ".bak_fm") if not os.path.exists(cp + ".bak_fm") else None
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", GG["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
     p.stdin.write(out.tobytes()); p.stdin.close(); p.wait()
     lk["g"] = [1.0, 1.0, 1.0]; lk["o"] = [0.0, 0.0, 0.0]; L[c] = lk
     shutil.copy(f"{w}/proj/src/shot_look.json", f"{w}/proj/src/shot_look.json.bak_fm")

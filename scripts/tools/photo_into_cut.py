@@ -9,10 +9,12 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
 from retime import rd, looks, post_f, pre_f
-W, H, FPS = 1280, 720, 29.97
+import retime
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("cut"); ap.add_argument("img"); ap.add_argument("--frames", required=True)
 ap.add_argument("--min", type=float, default=0.003); ap.add_argument("--write", action="store_true")
 a = ap.parse_args(); w = os.path.abspath(a.w)
+retime.use_geo(w); GG = geo(w); W, H, FPS = GG["W"], GG["H"], GG["FPS"]; MW, MH = half(w)  # 10/30 geo
 seg = [l for l in open(f"{w}/eye/segs.txt") if l.startswith(f"{a.cut}:")][0]
 c0 = round(float(seg.split(":")[1].split("-")[0]) * FPS)
 cp = f"{w}/cuts/{a.cut}.mp4"; C = rd(cp).copy()
@@ -22,27 +24,28 @@ LK = looks(w, fa, len(R))
 im = cv2.imread(a.img); s0 = 1200 / max(im.shape[:2]); im = cv2.resize(im, None, fx=s0, fy=s0, interpolation=cv2.INTER_AREA)
 sf = cv2.SIFT_create(4000); bf = cv2.BFMatcher()
 ki, di = sf.detectAndCompute(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY), None)
-mask = np.full((H, W), 255, np.uint8); mask[300:420] = 0
-g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360))
+mask = np.full((H, W), 255, np.uint8); mask[round(300 * H / 720):round(420 * H / 720)] = 0  # 字幕の帯（r2 の行を高さの比で）
+g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH))
 def tmpl_fit(r):
     """手本のコマ（字幕の帯を外した中ほど）を型に、写真を拡大率ごとに縮めて matchTemplate。一番合う所の相似変換を返す（一致 0.6 未満は None）"""
     gr = cv2.cvtColor(r, cv2.COLOR_BGR2GRAY); gi = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-    t = cv2.resize(gr[60:280, 240:1040], (400, 110)); best = (0.6, None)  # 手本の上の帯（字幕より上）を 1/2 で
+    ty0, ty1, tx0, tx1 = round(60 * H / 720), round(280 * H / 720), round(240 * W / 1280), round(1040 * W / 1280)  # r2 の場所を比で
+    t = cv2.resize(gr[ty0:ty1, tx0:tx1], ((tx1 - tx0) // 2, (ty1 - ty0) // 2)); best = (0.6, None)  # 手本の上の帯（字幕より上）を 1/2 で
     for sc in np.geomspace(0.15, 2.5, 40):  # 写真 1px が手本の sc px
         q = cv2.resize(gi, None, fx=sc / 2, fy=sc / 2, interpolation=cv2.INTER_AREA)
         if q.shape[0] < t.shape[0] or q.shape[1] < t.shape[1]: continue
         res = cv2.matchTemplate(q, t, cv2.TM_CCOEFF_NORMED); _, v, _, p = cv2.minMaxLoc(res)
-        if v > best[0]: best = (v, np.float32([[sc, 0, 240 - p[0] * 2], [0, sc, 60 - p[1] * 2]]))
+        if v > best[0]: best = (v, np.float32([[sc, 0, tx0 - p[0] * 2], [0, sc, ty0 - p[1] * 2]]))
     return best[1]
 
 
 def ecc_ref(r, A):
     """相似のまま ECC で詰める（1/2 の白黒・字幕の帯を外す）。うまくいかん時は元の A"""
     try:
-        gr = cv2.resize(cv2.cvtColor(r, cv2.COLOR_BGR2GRAY), (640, 360)).astype(np.float32)
-        S = np.float32([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 1]]); A3 = np.vstack([A, [0, 0, 1]]).astype(np.float32)
-        wi = cv2.warpAffine(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY), (S @ A3)[:2], (640, 360)).astype(np.float32)
-        mk = np.full((360, 640), 255, np.uint8); mk[150:210] = 0
+        gr = cv2.resize(cv2.cvtColor(r, cv2.COLOR_BGR2GRAY), (MW, MH)).astype(np.float32)
+        S = np.float32([[MW / W, 0, 0], [0, MH / H, 0], [0, 0, 1]]); A3 = np.vstack([A, [0, 0, 1]]).astype(np.float32)
+        wi = cv2.warpAffine(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY), (S @ A3)[:2], (MW, MH)).astype(np.float32)
+        mk = np.full((MH, MW), 255, np.uint8); mk[round(150 * MH / 360):round(210 * MH / 360)] = 0
         _, M = cv2.findTransformECC(gr, wi, np.eye(2, 3, dtype=np.float32), cv2.MOTION_AFFINE, (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 80, 1e-5), mk, 5)
         Mi = cv2.invertAffineTransform(M); M3 = np.vstack([Mi, [0, 0, 1]]).astype(np.float32)
         return (np.linalg.inv(S) @ M3 @ S @ A3)[:2]
@@ -85,5 +88,5 @@ for f in range(fa, fb + 1):
         C[j] = pre_f(best[1], lk) if lk[1].any() or (lk[0] != 1).any() else best[1]; n_in += 1
 if n_in and a.write:
     if not os.path.exists(cp + ".bak_pic"): shutil.copy(cp, cp + ".bak_pic")
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", GG["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
     p.stdin.write(C.tobytes()); p.stdin.close(); p.wait(); print("書いた", cp, n_in, "コマ")

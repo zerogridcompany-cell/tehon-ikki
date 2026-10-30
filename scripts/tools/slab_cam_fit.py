@@ -5,16 +5,24 @@ python3 slab_cam_fit.py <作業> --frames 1653,1658,1663,1668,1673 [--out tmp/sl
 - 手本の明るい所（白黒 >100）と、投影した板の形の重なり（Dice）を Nelder-Mead で最大に（何回か出発点を変える）
 - 出力＝cam の鍵（f・x・y・z・lx・ly・lz・fov）。前の鍵から始めるので動きがつながる
 """
-import argparse, glob, json, subprocess
+import argparse, glob, json, os, subprocess, sys
 import cv2
 import numpy as np
 from scipy.optimize import minimize
 
-W, H = 320, 180
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo
+W, H = 320, 180   # use_geo(<作業>) で geo の SW・SH に替わる（10/30）
+FPS = 29.97
+
+
+def use_geo(w):
+    global W, H, FPS
+    G = geo(w); W, H, FPS = G["SW"], G["SH"], G["FPS"]
 
 
 def ref_mask(ref, f):
-    o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{(f - 0.3) / 29.97:.4f}", "-i", ref, "-frames:v", "1", "-vf", f"scale={W}:{H}",
+    o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{(f - 0.3) / FPS:.4f}", "-i", ref, "-frames:v", "1", "-vf", f"scale={W}:{H}",
                         "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True).stdout
     g = np.frombuffer(o, np.uint8).reshape(H, W)
     return (g > 100).astype(np.float32)
@@ -71,6 +79,7 @@ def dice(a, b):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("--frames", required=True); ap.add_argument("--out", default="tmp/slab_cam.json"); ap.add_argument("--fov", type=float, default=30)
     a = ap.parse_args()
+    use_geo(a.w)
     ref = glob.glob(f"{a.w}/ref/*.mp4")[0]
     C = json.load(open(f"{a.w}/proj/src/slabs.json"))
     starts = [[5, 2.5, 16, 5, 0, -6], [5, 4, 14, 5, 0, -8], [8, 3, 18, 3, 0, -6], [3, 5, 12, 6, 0, -10]]

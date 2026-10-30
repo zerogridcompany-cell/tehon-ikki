@@ -1,21 +1,27 @@
 """persec.py  1コマずつの動きの量を3つの数で測る（洗い出し・場面ごとに手本とうちを比べる用。51 の persec.py の汎用版＝mp4 を直に読める）。
 使い方：python3 persec.py <mp4|コマのフォルダ(*.jpg)> <出力.json> [--a f0 --b f1] [--vs 比べる.mp4]
 1コマごとに：
-  d  ＝前のコマとの明るさの差の平均（320x180 の灰・動いたコマ＝0.3 超）
-  sm ＝16x9 のマスで「少しだけ動いた」マス（差 0.8〜12）の割合＝細かい動き（粒・揺れ）
-  sh ＝形の動き（240x136・4x4 のマスごとに Farneback のフローをアフィンで当てた残り＝katachi と同じ）。カット（差 40 超）は −1
+  d  ＝前のコマとの明るさの差の平均（横 320・縦は1本目の比＝r2 は 320x180 の灰・動いたコマ＝0.3 超）
+  sm ＝16x9 のマス（縦長は 9x16）で「少しだけ動いた」マス（差 0.8〜12）の割合＝細かい動き（粒・揺れ）
+  sh ＝形の動き（横 240・縦は比で4の倍数＝r2 は 240x136・4x4 のマスごとに Farneback のフローをアフィンで当てた残り＝katachi と同じ）。カット（差 40 超）は −1
 出す物：[{"f","d","sm","sh"}…]。--vs を付けると同じ範囲を両方測って「d の比（うち÷手本）・sm の平均・sh の平均」を並べる
 効いた数字（51）：fx の揺れが手本の 2〜3倍（sunset 0.55 対 1.5）と分かった→fx_smooth で動きの比 2.46→1.03。粒の要る場面（sm が手本より低い）を拾った
 採る条件：測るだけ。d の比が 1.5 以上＝fx_smooth の候補・0.67 以下＝止まりすぎ（hold か粒）・sm が手本の半分以下＝粒（grain_need）の候補
 """
-import argparse, glob, json, os, subprocess
+import argparse, glob, json, os, subprocess, sys
 import cv2
 import numpy as np
 
 cv2.setNumThreads(2); np.seterr(all="ignore")  # macOS の Accelerate が matmul で出す空の警告を消す（値は有限）
 ap = argparse.ArgumentParser(); ap.add_argument("src"); ap.add_argument("out"); ap.add_argument("--a", type=int, default=0); ap.add_argument("--b", type=int); ap.add_argument("--vs")
 g = ap.parse_args()
-W, H = 240, 136
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo_mp4
+if os.path.isdir(g.src): _h, _w = cv2.imread(sorted(glob.glob(os.path.join(g.src, "*.jpg")))[0]).shape[:2]
+else: _G = geo_mp4(g.src); _w, _h = _G["W"], _G["H"]
+SW = 320; SH = int(round(_h * SW / _w / 2) * 2)  # 10/30 geo：1本目の大きさの比（r2 は 320x180）
+CX, CY = (16, round(16 * _h / _w)) if _w >= _h else (round(16 * _w / _h), 16)  # マスの数（r2 は 16x9）
+W, H = 240, int(round(240 * _h / _w / 4) * 4)  # r2 は 240x136
 ys, xs = np.mgrid[0:H, 0:W].astype(np.float32)
 gh, gw = H // 4, W // 4
 Xs = []
@@ -28,16 +34,16 @@ for i in range(4):
 def frames(src):
     if os.path.isdir(src):
         for p in sorted(glob.glob(os.path.join(src, "*.jpg")))[g.a: g.b + 1 if g.b is not None else None]:
-            yield cv2.resize(cv2.cvtColor(cv2.imread(p), cv2.COLOR_BGR2GRAY), (320, 180), interpolation=cv2.INTER_AREA)
+            yield cv2.resize(cv2.cvtColor(cv2.imread(p), cv2.COLOR_BGR2GRAY), (SW, SH), interpolation=cv2.INTER_AREA)
         return
     n = (g.b - g.a + 1) if g.b is not None else 10 ** 7
     pr = subprocess.Popen(["ffmpeg", "-nostdin", "-v", "error", "-threads", "2", "-i", src, "-an", "-vf",
-                           f"select=between(n\\,{g.a}\\,{g.a + n - 1}),scale=320:180,format=gray", "-vsync", "0", "-f", "rawvideo", "-"], stdout=subprocess.PIPE)
+                           f"select=between(n\\,{g.a}\\,{g.a + n - 1}),scale={SW}:{SH},format=gray", "-vsync", "0", "-f", "rawvideo", "-"], stdout=subprocess.PIPE)
     while True:
-        b = pr.stdout.read(320 * 180)
-        if len(b) < 320 * 180:
+        b = pr.stdout.read(SW * SH)
+        if len(b) < SW * SH:
             break
-        yield np.frombuffer(b, np.uint8).reshape(180, 320)
+        yield np.frombuffer(b, np.uint8).reshape(SH, SW)
     pr.wait()
 
 
@@ -48,7 +54,7 @@ def measure(src):
         if prev is None:
             res.append({"f": g.a + k, "d": 0, "sm": 0, "sh": 0}); prev = (s320, sm_); continue
         dd = np.abs(s320 - prev[0]); hh, ww = dd.shape
-        cells = dd[:hh // 9 * 9, :ww // 16 * 16].reshape(9, hh // 9, 16, ww // 16).mean(axis=(1, 3))
+        cells = dd[:hh // CY * CY, :ww // CX * CX].reshape(CY, hh // CY, CX, ww // CX).mean(axis=(1, 3))
         sm = float(((cells > 0.8) & (cells < 12)).mean()); dm = float(dd.mean())
         if dm > 40:
             sh = -1.0

@@ -10,10 +10,12 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
 from retime import rd, looks, post_f, pre_f
-W, H, FPS = 1280, 720, 29.97
+import retime
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("cut"); ap.add_argument("img"); ap.add_argument("--frames", required=True)
 ap.add_argument("--flow", type=int, default=1); ap.add_argument("--loose", type=float, default=0.01); ap.add_argument("--write", action="store_true"); ap.add_argument("--sheet", default="")
 a = ap.parse_args(); w = os.path.abspath(a.w)
+retime.use_geo(w); GG = geo(w); W, H, FPS = GG["W"], GG["H"], GG["FPS"]; MW, MH = half(w)  # 10/30 geo
 seg = [l for l in open(f"{w}/eye/segs.txt") if l.startswith(f"{a.cut}:")][0]
 c0 = round(float(seg.split(":")[1].split("-")[0]) * FPS)
 cp = f"{w}/cuts/{a.cut}.mp4"; C = rd(cp).copy()
@@ -21,8 +23,8 @@ fa, fb = map(int, a.frames.split("-"))
 R = rd(glob.glob(f"{w}/ref/*.mp4")[0], sel=(fa, fb)); LK = looks(w, fa, len(R))
 im = cv2.imread(a.img); s0 = 1600 / max(im.shape[:2]); im = cv2.resize(im, None, fx=min(1, s0), fy=min(1, s0), interpolation=cv2.INTER_AREA)
 gi = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-mask = np.full((H, W), 255, np.uint8); mask[300:420] = 0
-g6 = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360), interpolation=cv2.INTER_AREA)
+mask = np.full((H, W), 255, np.uint8); mask[round(300 * H / 720):round(420 * H / 720)] = 0  # 字幕の帯（r2 の 300〜420 行）を高さの比で
+g6 = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH), interpolation=cv2.INTER_AREA)
 sf = cv2.SIFT_create(5000); ki, di = sf.detectAndCompute(gi, None)
 dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
 
@@ -40,21 +42,22 @@ def place(r):
             A, inl = cv2.estimateAffinePartial2D(np.float32([ki[x.queryIdx].pt for x in mm]), np.float32([kr[x.trainIdx].pt for x in mm]), method=cv2.RANSAC, ransacReprojThreshold=4.0)
             if A is not None and inl.sum() >= 10: Hm = np.vstack([A, [0, 0, 1]]).astype(np.float32)
     if Hm is None:
-        gr = cv2.cvtColor(r, cv2.COLOR_BGR2GRAY); t = cv2.resize(gr[40:290, 200:1080], (440, 125)); best = (0.5, None)
+        gr = cv2.cvtColor(r, cv2.COLOR_BGR2GRAY); ty0, ty1, tx0, tx1 = round(40 * H / 720), round(290 * H / 720), round(200 * W / 1280), round(1080 * W / 1280)  # r2 の型の場所を比で
+        t = cv2.resize(gr[ty0:ty1, tx0:tx1], ((tx1 - tx0) // 2, (ty1 - ty0) // 2)); best = (0.5, None)
         for sc in np.geomspace(0.15, 3.0, 50):
             q = cv2.resize(gi, None, fx=sc / 2, fy=sc / 2, interpolation=cv2.INTER_AREA)
             if q.shape[0] < t.shape[0] or q.shape[1] < t.shape[1]: continue
             _, v, _, p = cv2.minMaxLoc(cv2.matchTemplate(q, t, cv2.TM_CCOEFF_NORMED))
-            if v > best[0]: best = (v, np.float32([[sc, 0, 200 - p[0] * 2], [0, sc, 40 - p[1] * 2], [0, 0, 1]]))
+            if v > best[0]: best = (v, np.float32([[sc, 0, tx0 - p[0] * 2], [0, sc, ty0 - p[1] * 2], [0, 0, 1]]))
         Hm = best[1]
         if Hm is None: return None
-    S = np.float32([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 1]])
+    S = np.float32([[MW / W, 0, 0], [0, MH / H, 0], [0, 0, 1]])
     gr = cv2.GaussianBlur(g6(r).astype(np.float32), (0, 0), 1.5)
-    wi = cv2.GaussianBlur(cv2.warpPerspective(gi, S @ Hm, (640, 360)).astype(np.float32), (0, 0), 1.5)
-    mk = (cv2.warpPerspective(np.full(gi.shape, 255, np.uint8), S @ Hm, (640, 360)) > 0).astype(np.uint8) * 255; mk[150:210] = 0
+    wi = cv2.GaussianBlur(cv2.warpPerspective(gi, S @ Hm, (MW, MH)).astype(np.float32), (0, 0), 1.5)
+    mk = (cv2.warpPerspective(np.full(gi.shape, 255, np.uint8), S @ Hm, (MW, MH)) > 0).astype(np.uint8) * 255; mk[round(150 * MH / 360):round(210 * MH / 360)] = 0
     def sc(H_):  # 置いた絵の SSIM（写真の中だけ）
-        x = cv2.warpPerspective(gi, S @ H_, (640, 360)); mm = cv2.warpPerspective(np.full(gi.shape, 255, np.uint8), S @ H_, (640, 360)) > 0
-        if mm.sum() < 0.05 * 640 * 360: return -1
+        x = cv2.warpPerspective(gi, S @ H_, (MW, MH)); mm = cv2.warpPerspective(np.full(gi.shape, 255, np.uint8), S @ H_, (MW, MH)) > 0
+        if mm.sum() < 0.05 * MW * MH: return -1
         y = g6(r).copy(); y[~mm] = 0; x[~mm] = 0; return ssim(y, x)
     best = (sc(Hm), Hm)
     for mode in (cv2.MOTION_AFFINE, cv2.MOTION_HOMOGRAPHY):  # 外れる事がある＝点が上がった時だけ使う
@@ -78,11 +81,11 @@ def colmatch(x, r, m):
 
 
 def flowto(x, r):
-    """x を r の形へ寄せる（流れは 1/2 でならしてから 1280 へ）"""
+    """x を r の形へ寄せる（流れは 1/2 でならしてから手本の大きさへ）"""
     a = cv2.GaussianBlur(g6(r), (0, 0), 2); b = cv2.GaussianBlur(g6(x), (0, 0), 2)
     fl = dis.calc(a, b, None)  # r の各点が x のどこから来たか
     fl = cv2.GaussianBlur(fl, (0, 0), 12)
-    fl = cv2.resize(fl, (W, H)) * 2
+    fl = cv2.resize(fl, (W, H)) * (W / MW)
     gx, gy = np.meshgrid(np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32))
     return cv2.remap(x, gx + fl[..., 0], gy + fl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
@@ -108,11 +111,11 @@ for i, f in enumerate(range(fa, fb + 1)):
     # --loose＝くっきりが手本に近づくなら、点の下がりをここまで許す（SSIM はずれた中身をぼかすほど上がる＝r2 8：今 0.77 は横が欠けてぼかし 4）
     ok = en > 0.05 and (sc > sn + 0.003 or (sc >= sn - a.loose and abs(np.log(en)) < abs(np.log(max(ec, 1e-3))) - 0.1))
     print(f"{f} 今 {sn:.3f}（エッジ比 {ec:.2f}）→ 原本 {sc:.3f}（{en:.2f}）{'入れる' if ok else ''}", flush=True)
-    if a.sheet: SH.append(np.hstack([cv2.resize(x, (320, 180)) for x in (r, cur, new)]))
+    if a.sheet: SH.append(np.hstack([cv2.resize(x, (GG["SW"], GG["SH"])) for x in (r, cur, new)]))
     if ok:
         C[j] = pre_f(new, lk) if (lk[0] != 1).any() or lk[1].any() else new; n_in += 1
 if a.write and n_in:
     if not os.path.exists(cp + ".bak_gp"): shutil.copy(cp, cp + ".bak_gp")
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", GG["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp], stdin=subprocess.PIPE)
     p.stdin.write(C.tobytes()); p.stdin.close(); p.wait(); print("書いた", cp, n_in, "コマ")
 if a.sheet and SH: cv2.imwrite(a.sheet, np.vstack(SH))

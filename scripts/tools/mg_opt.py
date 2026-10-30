@@ -10,6 +10,7 @@ import argparse, glob, json, os, subprocess, sys
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import frames, ssim
+import cut_score
 
 
 def render(w, f0, f1, look, out, key="look"):
@@ -30,6 +31,7 @@ def main():
     ap.add_argument("w"); ap.add_argument("f0", type=int); ap.add_argument("f1", type=int); ap.add_argument("keys")
     ap.add_argument("--rounds", type=int, default=2); ap.add_argument("--out"); ap.add_argument("--json")
     g = ap.parse_args()
+    cut_score.use_geo(g.w)  # 10/30 geo
     if g.json:
         return opt_json(g)
     w = os.path.abspath(g.w)

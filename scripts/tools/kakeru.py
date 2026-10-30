@@ -1,6 +1,6 @@
 """手本にある絵が、うちでは欠けとる・ぼやけとる所をカットごとに数える（10/28 r2 カット9：手本は横長の写真が画面いっぱい・うちは縦長の写真＋両脇が紺の帯でぼやけ）。
 python3 kakeru.py <作業> <書き出し_noaudio.mp4> [--out shirabe/欠け表.json] [--top 40]
-- 物差し（320x180・字幕の帯を外す・カットの中の3コマ）
+- 物差し（geo の SW x SH＝r2 は 320x180・字幕の帯を外す・カットの中の3コマ）
   欠け＝手本はきめ（エッジ）があるのに、うちはほぼ平ら（手本の1/4未満）な面積の割合 → 帯・小さい置き方・切り抜き不足
   左右／上下の欠け＝欠けが画面の端の列・行に寄っとるか（帯の形）
   ぼけ＝うちのエッジの強さ÷手本（1.0 で同じ・0.6 未満はぼやけ）
@@ -11,12 +11,14 @@ import argparse, glob, json, os, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from retime import rd
-FPS = 29.97
+import retime
+from geo import geo
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("render")
 ap.add_argument("--out", default="shirabe/欠け表.json"); ap.add_argument("--top", type=int, default=40)
 a = ap.parse_args(); w = os.path.abspath(a.w)
-RA = rd(glob.glob(f"{w}/ref/*.mp4")[0], w=320, h=180); VA = rd(os.path.join(w, a.render), w=320, h=180)
-m = np.ones((180, 320), bool); m[75:105] = False  # 字幕の帯
+retime.use_geo(w); GG = geo(w); FPS, SW, SH = GG["FPS"], GG["SW"], GG["SH"]
+RA = rd(glob.glob(f"{w}/ref/*.mp4")[0], w=SW, h=SH); VA = rd(os.path.join(w, a.render), w=SW, h=SH)
+m = np.ones((SH, SW), bool); m[round(75 * SH / 180):round(105 * SH / 180)] = False  # 字幕の帯（r2 の行を高さの比で）
 
 
 def edge(x):
@@ -32,7 +34,7 @@ for l in open(f"{w}/eye/segs.txt"):
     f0, f1 = round(s0 * FPS), round(s1 * FPS)
     if f1 - f0 < 3 or f1 > min(len(RA), len(VA)): continue
     ks = [f0 + (f1 - f0) * q // 4 for q in (1, 2, 3)]
-    miss, ratio, cols, rws = [], [], np.zeros(320), np.zeros(180)
+    miss, ratio, cols, rws = [], [], np.zeros(SW), np.zeros(SH)
     for k in ks:
         er, eo = edge(RA[k]), edge(VA[k])
         tex = (er > 12) & m
@@ -43,8 +45,8 @@ for l in open(f"{w}/eye/segs.txt"):
     if not miss: continue
     ms, rt = float(np.mean(miss)), float(np.mean(ratio))
     tot = cols.sum() + 1e-6
-    side = float((cols[:64].sum() + cols[-64:].sum()) / tot)  # 左右の端 1/5 ずつに寄っとる割合
-    tb = float((rws[:36].sum() + rws[-36:].sum()) / tot)
+    side = float((cols[:SW // 5].sum() + cols[-(SW // 5):].sum()) / tot)  # 左右の端 1/5 ずつに寄っとる割合
+    tb = float((rws[:SH // 5].sum() + rws[-(SH // 5):].sum()) / tot)
     red = ms >= 0.08 or rt < 0.6
     rows.append(dict(cut=cut, f0=f0, f1=f1, kake=round(ms, 3), boke=round(rt, 2), sayu=round(side, 2), jouge=round(tb, 2), red=red))
 rows.sort(key=lambda r: (-r["kake"], r["boke"]))

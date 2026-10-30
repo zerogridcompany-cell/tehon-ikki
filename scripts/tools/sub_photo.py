@@ -1,19 +1,23 @@
 """写真が2〜4コマで替わるモンタージュで、小さいカット（手本のコマ f0〜f1）ごとに写真をはめて、カットの動画の該当コマだけ差し替える。
 
 python3 sub_photo.py <作業フォルダ> <pick.json> --ids 2017,2055 [--segs tmp/open_segs.json]
-- pick.json＝img_pick.py の出力（img・A＝画像→手本1280x720）
+- pick.json＝img_pick.py の出力（img・A＝画像→手本の画素・r2 は 1280x720）
 - 1コマずつ：A から ECC（拡大・移動・回転）で詰める→色を手本に合わせる（色ごとに1次・字幕の帯を外す）→ぼかし 0〜3 の良い方
 - 差し替え先＝eye/out.json でその手本のコマを含むカットの cuts/<番号>.mp4（無ければ黒から作る）。前の物は .bak_sub に控え
 """
-import argparse, glob, json, os, shutil, subprocess
+import argparse, glob, json, os, shutil, subprocess, sys
 import cv2
 import numpy as np
 
-W, H = 1280, 720
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
 FPS = 29.97  # 手本の r_frame_rate＝2997/100
+FPS_FF, SW, SH = "2997/100", 320, 180
 
 
-def read_all(p, fps="2997/100"):
+def read_all(p, fps=None):
+    fps = fps or FPS_FF
     r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", f"fps={fps},scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
     return np.frombuffer(r.stdout, np.uint8).reshape(-1, H, W, 3).copy()
 
@@ -25,9 +29,9 @@ def ref_frames(ref, f0, f1):
 
 
 def ssim_g(a, b, m):
-    a = cv2.resize(cv2.cvtColor(a, cv2.COLOR_BGR2GRAY), (320, 180)).astype(np.float32)
-    b = cv2.resize(cv2.cvtColor(b, cv2.COLOR_BGR2GRAY), (320, 180)).astype(np.float32)
-    m = cv2.resize(m.astype(np.uint8), (320, 180)) > 0
+    a = cv2.resize(cv2.cvtColor(a, cv2.COLOR_BGR2GRAY), (SW, SH)).astype(np.float32)
+    b = cv2.resize(cv2.cvtColor(b, cv2.COLOR_BGR2GRAY), (SW, SH)).astype(np.float32)
+    m = cv2.resize(m.astype(np.uint8), (SW, SH)) > 0
     C1, C2 = 6.5, 58.5
     mu1 = cv2.GaussianBlur(a, (7, 7), 1.5); mu2 = cv2.GaussianBlur(b, (7, 7), 1.5)
     s1 = cv2.GaussianBlur(a * a, (7, 7), 1.5) - mu1 ** 2; s2 = cv2.GaussianBlur(b * b, (7, 7), 1.5) - mu2 ** 2
@@ -40,11 +44,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("w"); ap.add_argument("pick"); ap.add_argument("--ids", required=True); ap.add_argument("--segs", default="tmp/open_segs.json"); ap.add_argument("--frame", action="store_true", help="白地・黒地の小さい枠の MG：手本で地の色と違う所の箱の中だけに写真を出す")
     g = ap.parse_args()
+    global W, H, FPS, FPS_FF, SW, SH
+    G = geo(g.w); W, H, FPS, FPS_FF, SW, SH = G["W"], G["H"], G["FPS"], G["FPS_FF"], G["SW"], G["SH"]
     ref = glob.glob(f"{g.w}/ref/*.mp4")[0]
     pick = json.load(open(g.pick))
     segs = {str(s["id"]): s for s in json.load(open(f"{g.w}/{g.segs}"))}
     shots = json.load(open(f"{g.w}/eye/out.json"))["shots"]
-    txt = np.ones((H, W), bool); txt[300:420] = False
+    txt = np.ones((H, W), bool); txt[round(300 * H / 720):round(420 * H / 720)] = False  # 字幕の帯（r2 の行を高さの比で）
     cache = {}
     for sid in g.ids.split(","):
         p, sg = pick[sid], segs[sid]
@@ -59,8 +65,8 @@ def main():
             s = 480 / W
             A = A0.copy()
             a480 = np.diag([s, s, 1.0]) @ np.vstack([A, [0, 0, 1]])
-            wv = cv2.warpAffine(img_g, a480[:2].astype(np.float32), (480, 270))
-            rg = cv2.resize(cv2.cvtColor(r, cv2.COLOR_BGR2GRAY), (480, 270))
+            wv = cv2.warpAffine(img_g, a480[:2].astype(np.float32), (480, round(480 * H / W)))  # r2 は 480x270
+            rg = cv2.resize(cv2.cvtColor(r, cv2.COLOR_BGR2GRAY), (480, round(480 * H / W)))
             try:
                 _, D = cv2.findTransformECC(rg.astype(np.float32), wv.astype(np.float32), np.eye(2, 3, dtype=np.float32), cv2.MOTION_AFFINE,
                                             (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 60, 1e-5), None, 3)
@@ -121,7 +127,7 @@ def main():
         if os.path.exists(cp) and not os.path.exists(cp + ".bak_sub"):
             shutil.copy(cp, cp + ".bak_sub")
         tmp = cp + ".tmp.mp4"
-        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100",
+        p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF,
                               "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", tmp], stdin=subprocess.PIPE)
         p.stdin.write(F.tobytes()); p.stdin.close(); p.wait()
         shutil.move(tmp, cp)

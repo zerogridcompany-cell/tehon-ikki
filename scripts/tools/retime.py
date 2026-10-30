@@ -11,14 +11,25 @@ import argparse, glob, os, shutil, subprocess, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+import cut_score
+from geo import geo
 
-W, H, FPS = 1280, 720, 29.97
+W, H, FPS = 1280, 720, 29.97   # use_geo(<作業>) で手本の数字に替わる（10/30 geo）
+FPS_FF = "2997/100"
+
+
+def use_geo(w):
+    """手本の大きさ・fps を geo から読む（rd・interp・gray と cut_score.frames に効く）。rd を使う道具は最初に1回呼ぶ"""
+    global W, H, FPS, FPS_FF
+    G = geo(w); W, H, FPS, FPS_FF = G["W"], G["H"], G["FPS"], G["FPS_FF"]
+    cut_score.use_geo(w)
 cv2.setNumThreads(4)
 
 
-def rd(p, fps=None, ss=None, t=None, w=W, h=H, sel=None):
+def rd(p, fps=None, ss=None, t=None, w=None, h=None, sel=None):
+    w = w or W; h = h or H
     vf = f"scale={w}:{h}" if fps is None else f"fps={fps},scale={w}:{h}"
-    if sel: vf = f"fps=2997/100,select='between(n\\,{sel[0]}\\,{sel[1]})',scale={w}:{h}"
+    if sel: vf = f"fps={FPS_FF},select='between(n\\,{sel[0]}\\,{sel[1]})',scale={w}:{h}"
     cmd = ["ffmpeg", "-v", "error"] + (["-ss", str(ss)] if ss is not None else []) + (["-t", str(t)] if t is not None else []) + ["-i", p, "-vf", vf]
     if sel: cmd += ["-vsync", "0"]
     r = subprocess.run(cmd + ["-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
@@ -26,7 +37,7 @@ def rd(p, fps=None, ss=None, t=None, w=W, h=H, sel=None):
 
 
 def gray(x, s=320):
-    return cv2.cvtColor(cv2.resize(x, (s, s * 9 // 16), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY).astype(np.float32)
+    return cv2.cvtColor(cv2.resize(x, (s, s * H // W), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY).astype(np.float32)
 
 
 def ncc(a, b, m):
@@ -77,8 +88,10 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("cut"); ap.add_argument("src")
     ap.add_argument("--win", default=""); ap.add_argument("--min", type=float, default=-0.003); ap.add_argument("--write", action="store_true")
     ap.add_argument("--nomove", action="store_true", help="ECC で詰めん（H だけ）")
-    ap.add_argument("--cols", default="", help="合わせに使う列 x0-x1（1280 幅）。フィルムの窓のカットは 260-1020＝帯を外して、後で gate_fx")
-    a = ap.parse_args(); w = os.path.abspath(a.w)
+    ap.add_argument("--cols", default="", help="合わせに使う列 x0-x1（手本の幅の画素）。フィルムの窓のカットは 260-1020＝帯を外して、後で gate_fx")
+    a = ap.parse_args(); w = os.path.abspath(a.w); use_geo(w)
+    G = geo(w); SW, SH = G["SW"], G["SH"]  # 字幕の帯（r2 の 720 の 300〜420）の行は手本の高さの比で移す
+    h480 = int(round(480 * H / W)); h960 = int(round(960 * H / W)); MW, MH = cut_score.W, cut_score.H
     seg = [l for l in open(f"{w}/eye/segs.txt") if l.startswith(f"{a.cut}:")][0]
     s0, s1 = map(float, seg.split(":")[1].split("-")); f0, f1 = round(s0 * FPS), round(s1 * FPS)
     R = rd(glob.glob(f"{w}/ref/*.mp4")[0], sel=(f0, f1 - 1)); n = len(R)
@@ -87,18 +100,18 @@ def main():
     S = rd(a.src, ss=sw[0] if sw else None, t=(sw[1] - sw[0]) if sw else None)  # 元の fps のまま
     sfps = cv2.VideoCapture(a.src).get(cv2.CAP_PROP_FPS)
     print("手本", n, "コマ／元", len(S), "コマ", round(sfps, 2), "fps", flush=True)
-    m = np.ones((180, 320), bool); m[75:105] = False
-    m480 = np.ones((270, 480), np.uint8); m480[112:158] = 0
+    m = np.ones((SH, SW), bool); m[round(75 * SH / 180):round(105 * SH / 180)] = False
+    m480 = np.ones((h480, 480), np.uint8); m480[round(112 * h480 / 270):round(158 * h480 / 270)] = 0
     cx = [int(v) for v in a.cols.split("-")] if a.cols else [0, W]
-    m[:, :cx[0] * 320 // W] = False; m[:, cx[1] * 320 // W:] = False
+    m[:, :cx[0] * SW // W] = False; m[:, cx[1] * SW // W:] = False
     m480[:, :cx[0] * 480 // W] = 0; m480[:, cx[1] * 480 // W:] = 0
     # ① H：手本の真ん中と、元を4コマおきに SIFT
     sf = cv2.SIFT_create(3000); bf = cv2.BFMatcher()
-    mid = n // 2; rg = cv2.resize(cv2.cvtColor(R[mid], cv2.COLOR_BGR2GRAY), (960, 540)); rmask = np.ones_like(rg); rmask[225:315] = 0
+    mid = n // 2; rg = cv2.resize(cv2.cvtColor(R[mid], cv2.COLOR_BGR2GRAY), (960, h960)); rmask = np.ones_like(rg); rmask[round(225 * h960 / 540):round(315 * h960 / 540)] = 0
     kr, dr = sf.detectAndCompute(rg, rmask)
     best = (0, None, 0)
     for j in range(0, len(S), 3):
-        ks, ds = sf.detectAndCompute(cv2.resize(cv2.cvtColor(S[j], cv2.COLOR_BGR2GRAY), (960, 540)), None)
+        ks, ds = sf.detectAndCompute(cv2.resize(cv2.cvtColor(S[j], cv2.COLOR_BGR2GRAY), (960, h960)), None)
         if ds is None or dr is None: continue
         mm = [x for x, y in (q for q in bf.knnMatch(ds, dr, k=2) if len(q) == 2) if x.distance < 0.75 * y.distance]
         if len(mm) < 10: continue
@@ -107,7 +120,7 @@ def main():
     if best[1] is None: sys.exit("SIFT が当たらん")
     Hm = best[1]; Sc = np.diag([960 / W, 960 / W, 1]); Hf = np.linalg.inv(Sc) @ Hm @ Sc
     print("H 目印", best[0], "元のコマ", best[2], flush=True)
-    # ② 元を手本の形にして 320 で NCC
+    # ② 元を手本の形にして SW（320）で NCC
     Sg = [gray(cv2.warpPerspective(s, Hf, (W, H), borderMode=cv2.BORDER_REFLECT)) for s in S]
     pos, conf = [], []
     for k in range(n):
@@ -133,9 +146,9 @@ def main():
     for k in use:
         fr = interp(S, P[k], dis); Ms[k] = (fr, Hf.copy())
         if not a.nomove:
-            tg = cv2.resize(cv2.cvtColor(R[k], cv2.COLOR_BGR2GRAY), (480, 270)).astype(np.float32)
+            tg = cv2.resize(cv2.cvtColor(R[k], cv2.COLOR_BGR2GRAY), (480, h480)).astype(np.float32)
             Sh = np.diag([480 / W, 480 / W, 1]); H0 = (Sh @ Hf @ np.linalg.inv(Sh)).astype(np.float32)
-            sg = cv2.resize(cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY), (480, 270)).astype(np.float32)
+            sg = cv2.resize(cv2.cvtColor(fr, cv2.COLOR_BGR2GRAY), (480, h480)).astype(np.float32)
             try:
                 _, Hk = cv2.findTransformECC(tg, sg, np.linalg.inv(H0).astype(np.float32), cv2.MOTION_HOMOGRAPHY, (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 80, 1e-5), m480, 3)
                 Ms[k] = (fr, np.linalg.inv(Sh) @ np.linalg.inv(Hk.astype(np.float64)) @ Sh)
@@ -146,7 +159,7 @@ def main():
     sm = {k: np.mean([Ms[j][1] / Ms[j][1][2, 2] for j in ks if abs(j - k) <= 1], 0) for k in ks}
     warped = {k: cv2.warpPerspective(Ms[k][0], sm[k], (W, H), borderMode=cv2.BORDER_REFLECT) for k in ks}
     # ⑥ 色（カット全体で1つの2次）
-    txt = np.ones((H, W), bool); txt[300:420] = False; txt[:, :cx[0]] = False; txt[:, cx[1]:] = False
+    txt = np.ones((H, W), bool); txt[round(300 * H / 720):round(420 * H / 720)] = False; txt[:, :cx[0]] = False; txt[:, cx[1]:] = False
     X = np.concatenate([warped[k][::4, ::4][txt[::4, ::4]] for k in ks]).astype(np.float64) / 255
     Y = np.concatenate([R[k][::4, ::4][txt[::4, ::4]] for k in ks]).astype(np.float64)
     # 色ごとの「元の値→手本の値」の表（区間ごとの中央値・前へしか上がらん形）。2次の式は空が白く飛んだ（67）
@@ -163,7 +176,7 @@ def main():
         lut.append(np.clip(t, 0, 255).astype(np.uint8))
     def col(im):
         return np.stack([cv2.LUT(im[..., c], lut[c]) for c in range(3)], -1)
-    g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360))
+    g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH))
     # カットは Remotion の shot_look（g・o・blur）の前の色＝比べる時は look をかけてから、書く時は g・o を逆にかける（コマごとに効く物）
     LK = looks(w, f0, n)
     bs = max(l[2] for l in LK)
@@ -182,7 +195,7 @@ def main():
     after = np.mean([ssim(g(R[k]), g(post(out[k], k))) for k in range(n)])
     print(f"カット {a.cut} SSIM {before:.3f} → {after:.3f}（ぼかし {bb[1]}・作り直した {len(ks)}/{n} コマ）", flush=True)
     tmp = f"{w}/tmp/rt_{a.cut}.mp4"; os.makedirs(f"{w}/tmp", exist_ok=True)
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", tmp], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF, "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", tmp], stdin=subprocess.PIPE)
     p.stdin.write(out.tobytes()); p.stdin.close(); p.wait(); print("試し", tmp)
     if a.write and after >= before + a.min:
         if os.path.exists(cutp) and not os.path.exists(cutp + ".bak_rt"): shutil.copy(cutp, cutp + ".bak_rt")

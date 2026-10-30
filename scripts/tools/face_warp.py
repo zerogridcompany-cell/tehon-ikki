@@ -4,9 +4,11 @@ python3 face_warp.py <作業> <カット番号> [--out tmp/face/<番号>.mp4] [-
 - 縮める時に出る縁は BORDER_REFLECT で埋める（黒い縁を出さん）
 - 顔が 3コマ未満しか取れんカットはやらん
 """
-import argparse, glob, json, os, shutil, subprocess
+import argparse, glob, json, os, shutil, subprocess, sys
 import cv2, numpy as np, mediapipe as mp
-W, H = 1280, 720
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
 FD = mp.solutions.face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.4)
 
 
@@ -26,8 +28,10 @@ def face(im):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("i"); ap.add_argument("--out"); ap.add_argument("--write", action="store_true")
     g = ap.parse_args()
+    global W, H
+    G = geo(g.w); W, H = G["W"], G["H"]
     s = [s for s in json.load(open(f"{g.w}/eye/out.json"))["shots"] if str(s["i"]) == str(g.i)][0]
-    f0 = int(round(s["t0"] * 29.97)); src = f"{g.w}/cuts/{g.i}.mp4"
+    f0 = int(round(s["t0"] * G["FPS"])); src = f"{g.w}/cuts/{g.i}.mp4"
     F = rd(src); R = rd(sorted(glob.glob(f"{g.w}/ref/*.mp4"))[0], f0, f0 + len(F)); n = min(len(F), len(R))
     P = []
     for j in range(0, n, max(1, n // 8)):
@@ -39,7 +43,7 @@ def main():
     print(f"{g.i} 顔 {len(P)}コマ 倍率 {sc:.3f} 移動 {ca - cb}")
     out = [cv2.warpAffine(f, M, (W, H), flags=cv2.INTER_LANCZOS4, borderMode=cv2.BORDER_REFLECT) for f in F]
     o = g.out or f"{g.w}/tmp/face/{g.i}.mp4"; os.makedirs(os.path.dirname(o), exist_ok=True)
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", o], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", G["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", o], stdin=subprocess.PIPE)
     p.stdin.write(np.array(out).tobytes()); p.stdin.close(); p.wait(); print("書いた", o)
     if g.write:
         if not os.path.exists(src + ".bak_face"): shutil.copy(src, src + ".bak_face")

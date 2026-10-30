@@ -1,4 +1,4 @@
-"""wave_top.py  動きの波（mane_check と同じ：10fps・320幅・RGB の前のコマとの差）の相関を、どのコマが一番下げとるかを順に出す（51 の wave_top.py と wave_diff.py を1本に）。
+"""wave_top.py  動きの波（mane_check と同じ：10fps・320幅（縦は手本の比）・RGB の前のコマとの差）の相関を、どのコマが一番下げとるかを順に出す（51 の wave_top.py と wave_diff.py を1本に）。
 使い方：python3 wave_top.py <作業|手本.mp4> <うち.mp4> [--n 25] [--vs 前の版.mp4]
 入れる物：手本・うちの書き出し（長さは短い方にそろえる）
 出す物：
@@ -11,15 +11,17 @@ import argparse, os, subprocess, sys
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tk_common import ref_path
+from geo import geo_mp4
 
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("ours"); ap.add_argument("--n", type=int, default=25); ap.add_argument("--vs")
 a = ap.parse_args()
+_G = geo_mp4(ref_path(a.w)); SW, SH = _G["SW"], _G["SH"]  # 10/30 geo（r2 は 320x180）
 
 
 def fr(p):
-    raw = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-threads", "2", "-i", p, "-an", "-vf", "fps=10,scale=320:180,format=rgb24", "-f", "rawvideo", "-"],
+    raw = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-threads", "2", "-i", p, "-an", "-vf", f"fps=10,scale={SW}:{SH},format=rgb24", "-f", "rawvideo", "-"],
                          capture_output=True).stdout
-    f = np.frombuffer(raw, np.uint8).reshape(-1, 180, 320, 3)
+    f = np.frombuffer(raw, np.uint8).reshape(-1, SH, SW, 3)
     return np.r_[0, [float(np.abs(f[i].astype(np.int16) - f[i - 1]).mean()) for i in range(1, len(f))]]
 
 

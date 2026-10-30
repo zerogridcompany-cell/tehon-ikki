@@ -1,13 +1,15 @@
 """全カットの「写真の大きさ・位置」を特徴点（SIFT）で数字にする（10/28 r2：依頼者3回目「写真の大きさが違う・数字で出して0になるまで」）。
 python3 size_sift.py <作業> <書き出し.mp4> [--out shirabe/大きさ表.json] [--ids 1,2]
-- カットごとに 3コマ（25・50・75%）。手本とうちの白黒 960 幅・字幕の帯（y 300〜400/720）は外す
+- カットごとに 3コマ（25・50・75%）。手本とうちの白黒 960 幅・字幕の帯（y 300〜400/720＝手本の高さの比）は外す
 - 特徴点を比べて（比 0.75）RANSAC の相似（拡大・回転・移動）＝うち→手本。目印 15 以上のコマだけ・中央値
-- 出す値：s＝手本の大きさ÷うち（1.00 が正しい・1.05＝うちが5%小さい）・dx/dy＝画面の真ん中がずれとる px（1280 幅・＋は手本が右/下）・rot（度）・inl（目印）
+- 出す値：s＝手本の大きさ÷うち（1.00 が正しい・1.05＝うちが5%小さい）・dx/dy＝画面の真ん中がずれとる px（手本の画素・r2 は 1280 幅・＋は手本が右/下）・rot（度）・inl（目印）
 - 判定：|s−1|≤0.01 かつ |dx|,|dy|≤4 で ✅。目印が足らんカットは「測れん」（中身が別物＝代わりの映像・生成）
 """
-import argparse, glob, json, os, subprocess
+import argparse, glob, json, os, subprocess, sys
 import cv2, numpy as np
-W, H, w = 1280, 720, 960; k = W / w; h = int(H / k)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+W, H, w = 1280, 720, 960; k = W / w; h = int(H / k)   # main で geo(<作業>) に替わる（10/30）
 sift = cv2.SIFT_create(4000); bf = cv2.BFMatcher()
 
 
@@ -23,7 +25,7 @@ def grab(p, want):
 
 
 def meas(a, b):
-    m = np.ones_like(a) * 255; m[int(300 / k):int(400 / k)] = 0
+    m = np.ones_like(a) * 255; m[int(300 * H / 720 / k):int(400 * H / 720 / k)] = 0
     ka, da = sift.detectAndCompute(a, m); kb, db = sift.detectAndCompute(b, m)
     if da is None or db is None or len(ka) < 10 or len(kb) < 10: return None
     mm = [x for x, y in (p for p in bf.knnMatch(db, da, k=2) if len(p) == 2) if x.distance < 0.75 * y.distance]
@@ -70,13 +72,15 @@ def meas_ncc(a, b):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--json", default="shirabe/大きさ表.json"); ap.add_argument("--ids"); ap.add_argument("--cuts", action="store_true", help="書き出しの代わりに cuts/<番号>.mp4 を直接測る（書き出さずに回せる）")
     g = ap.parse_args()
+    global W, H, k, h
+    G = geo(g.w); W, H = G["W"], G["H"]; k = W / w; h = int(H / k); FPS = G["FPS"]
     ref = sorted(glob.glob(f"{g.w}/ref/*.mp4"))[0]
     shots = sorted(json.load(open(f"{g.w}/eye/out.json"))["shots"], key=lambda s: s["t0"])
     want = set(g.ids.split(",")) if g.ids else None
     plan = []
     for s in shots:
         if want and str(s["i"]) not in want: continue
-        f0, f1 = int(round(s["t0"] * 29.97)), int(round(s["t1"] * 29.97))
+        f0, f1 = int(round(s["t0"] * FPS)), int(round(s["t1"] * FPS))
         if f1 - f0 < 2: continue
         plan.append((s, sorted(set(int(f0 + (f1 - f0) * q) for q in (0.25, 0.5, 0.75)))))
     need = {n for _, ns in plan for n in ns}
@@ -84,7 +88,7 @@ def main():
     if g.cuts:
         OF = {}
         for s_, ns_ in plan:
-            f0_ = int(round(s_["t0"] * 29.97)); got_ = grab(f"{g.w}/cuts/{s_['i']}.mp4", {n - f0_ for n in ns_})
+            f0_ = int(round(s_["t0"] * FPS)); got_ = grab(f"{g.w}/cuts/{s_['i']}.mp4", {n - f0_ for n in ns_})
             for n in ns_:
                 if n - f0_ in got_: OF[n] = got_[n - f0_]
     else:

@@ -7,7 +7,9 @@ python3 logo_fill.py <作業> <カット番号> --box x0,y0,x1,y1 [--mode box|di
 """
 import argparse, os, shutil, subprocess, sys
 import cv2, numpy as np
-W, H = 1280, 720
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
 
 
 def rd(p, a=None, b=None):
@@ -42,9 +44,11 @@ def main():
     ap.add_argument("--track", action="store_true", help="box の中の形を真ん中のコマから取り、コマごとに拡大0.8〜1.25で追って箱を動かす（拡大のかかったカットのロゴ）")
     ap.add_argument("--margin", type=int, default=12)
     g = ap.parse_args(); x0, y0, x1, y1 = map(int, g.box.split(","))
+    global W, H
+    G = geo(g.w); W, H = G["W"], G["H"]
     import json, glob
     s = [s for s in json.load(open(f"{g.w}/eye/out.json"))["shots"] if str(s["i"]) == str(g.i)][0]
-    f0 = int(round(s["t0"] * 29.97)); src = f"{g.w}/cuts/{g.i}.mp4"
+    f0 = int(round(s["t0"] * G["FPS"])); src = f"{g.w}/cuts/{g.i}.mp4"
     F = rd(src); R = rd(sorted(glob.glob(f"{g.w}/ref/*.mp4"))[0], f0, f0 + len(F))
     n = min(len(F), len(R))
     if g.mode == "box" and g.track:
@@ -79,7 +83,7 @@ def main():
             masks.append(cv2.dilate(m, np.ones((17, 17), np.uint8)))
     out = [fill(f, masks[j], j) if masks[j].any() else f for j, f in enumerate(F)]
     o = g.out or f"{g.w}/tmp/logo/{g.i}.mp4"; os.makedirs(os.path.dirname(o), exist_ok=True)
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", o], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", G["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", o], stdin=subprocess.PIPE)
     p.stdin.write(np.array(out).tobytes()); p.stdin.close(); p.wait()
     cv2.imwrite(o.replace(".mp4", "_mask.png"), masks[len(masks) // 2])
     print("書いた", o, "マスクの画素", int((masks[len(masks) // 2] > 0).sum()))

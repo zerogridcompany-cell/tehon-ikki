@@ -55,8 +55,11 @@ case "$1" in
     REF="$2"; W="$3"; mkdir -p "$W/ref" "$W/cuts" "$W/src" "$W/shirabe"
     cp -n "$REF" "$W/ref/"
     [ -d "$W/proj" ] || { cp -R "$SK/assets/proj" "$W/proj"; ln -s "$NODE_MODULES" "$W/proj/node_modules"; }
+    # 🔒10/30 つなぎ：段0 の図鑑が無ければ先に作る（手本は1回だけ見る）→ カット分け・cfg・字幕の下書きは図鑑から
+    [ -f "$W/zukan/zukan.json" ] || bash "$0" miru "$W/ref/$(basename "$REF")" "$W" || { echo "🔴 段0 見る が門を通らん＝作る段に入らん"; exit 1; }
     $PY "$HERE/eye_prep.py" "$W"
     cp "$W/cfg.json" "$W/proj/src/cfg.json"
+    $PY "$HERE/zukan_proj.py" "$W"
     echo "次：Codex に eye/task.md を渡して eye/out.json を作らせる（cd $W/eye && codex exec --skip-git-repo-check -s workspace-write \"task.md を読んでその通りに out.json を作って\"）"
     ;;
   plates)
@@ -140,12 +143,11 @@ print('4コマ未満しか出ん語（句の途中で消えとらんか目で見
 P
     ;;
   zoomblur) W="$2"; cd "$W"
-    $PY - <<'P' | while read k r; do $PY "$T/zoom_blur.py" . "$k" --frames "$r" | grep -E "書いた" | sed "s/^/$k /"; done
-import os
-for l in open('eye/segs.txt'):
-    if ':' not in l: continue
-    k,v=l.split(':'); a,b=map(float,v.split('-')); f0,f1=round(a*29.97),round(b*29.97)
-    if f1-f0>=2 and os.path.exists(f'cuts/{k.strip()}.mp4'): print(k.strip(), f'{f0}-{f1-1}')
+    T="$T" $PY - <<'P' | while read k r; do $PY "$T/zoom_blur.py" . "$k" --frames "$r" | grep -E "書いた" | sed "s/^/$k /"; done
+import os,sys
+sys.path.insert(0, os.environ["T"]); from geo import cut_frames   # 10/30：29.97 の直書きをやめて図鑑のカット（無ければ segs.txt×手本の fps）
+for k,(f0,f1) in enumerate(cut_frames('.')):
+    if f1-f0>=2 and os.path.exists(f'cuts/{k}.mp4'): print(k, f'{f0}-{f1-1}')
 P
     ;;
   zero)  bash "$HERE/zero.sh" "$2" "$3" ;;

@@ -8,9 +8,11 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
 from retime import rd, looks, post_f
-FPS = 29.97
+import retime
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("cut"); ap.add_argument("photo"); ap.add_argument("--write", action="store_true"); ap.add_argument("--nosmooth", action="store_true", help="等速にならさず1コマずつの合わせのまま")
 a = ap.parse_args(); w = os.path.abspath(a.w); c = a.cut
+retime.use_geo(w); GG = geo(w); FPS = GG["FPS"]; MW, MH = half(w)
 seg = [l for l in open(f"{w}/eye/segs.txt") if l.startswith(f"{c}:")][0]
 s0, s1 = map(float, seg.split(":")[1].split("-")); f0, f1 = round(s0 * FPS), round(s1 * FPS)
 R = rd(glob.glob(f"{w}/ref/*.mp4")[0], sel=(f0, f1 - 1)); n = len(R); LK = looks(w, f0, n); H, W = R.shape[1:3]
@@ -71,12 +73,12 @@ for sg in (0, 0.4, 0.7, 1.0, 1.4, 2.0):
     e = np.mean([edge(post_f(cv2.GaussianBlur(out[j], (0, 0), sg) if sg else out[j], LK[j])) for j in js]) / re_
     if abs(np.log(e)) < best[0]: best = (abs(np.log(e)), sg, e)
 if best[1]: out = np.stack([cv2.GaussianBlur(x, (0, 0), best[1]) for x in out])
-gg = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360), interpolation=cv2.INTER_AREA)
+gg = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH), interpolation=cv2.INTER_AREA)
 cp = f"{w}/cuts/{c}.mp4"; C = rd(cp)[:n]
 sb = np.mean([ssim(gg(R[j]), gg(post_f(C[j], LK[j]))) for j in range(n)]); sa = np.mean([ssim(gg(R[j]), gg(post_f(out[j], LK[j]))) for j in range(n)])
 eb = np.mean([edge(post_f(C[j], LK[j])) for j in js]) / re_
 print(f"σ{best[1]}・鋭さ比 {eb:.2f}→{best[2]:.2f}・点 {sb:.4f}→{sa:.4f}")
 dst = cp if a.write else f"{w}/tmp/zoom_{c}.mp4"
 if a.write and not os.path.exists(cp + ".bak_zoom"): shutil.copy(cp, cp + ".bak_zoom")
-p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", dst], stdin=subprocess.PIPE)
+p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", GG["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", dst], stdin=subprocess.PIPE)
 p.stdin.write(out.tobytes()); p.stdin.close(); p.wait(); print("書いた", dst)

@@ -3,11 +3,12 @@ python3 sharp_check.py <作業> <うちの書き出し_noaudio.mp4> [--out shira
 - 字幕の帯（高さ 41.6〜58.3%）と端 16px を外す・カットの 1/4・1/2・3/4 のコマの中央値
 - 比＝うち÷手本。🔴 0.5 未満（ぼかしすぎ）／🟡 0.5〜0.75／🟠 1.6 より上（鋭すぎ）
 """
-import argparse, glob, json, os
+import argparse, glob, json, os, sys
 import cv2, numpy as np
-FPS = 29.97
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("ours"); ap.add_argument("--out", default="shirabe/鋭さ表.json")
-a = ap.parse_args(); w = os.path.abspath(a.w)
+a = ap.parse_args(); w = os.path.abspath(a.w); FPS = geo(w)["FPS"]  # 10/30 geo
 cr, co = cv2.VideoCapture(glob.glob(f"{w}/ref/*.mp4")[0]), cv2.VideoCapture(a.ours)
 def lap(cap, n):
     cap.set(1, n); ok, f = cap.read()

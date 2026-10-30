@@ -2,18 +2,24 @@
 python3 decap.py <作業フォルダ> <カット番号> [--y0 280 --y1 470 --out tmp/decap/<番号>.mp4]
 - 字＝帯の中で、周りより明るい細い形（tophat）かつ白に近い所。少し太らせて埋める
 """
-import argparse, os, subprocess
+import argparse, os, subprocess, sys
 import cv2
 import numpy as np
 
-W, H = 1280, 720
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("w"); ap.add_argument("i"); ap.add_argument("--y0", type=int, default=280); ap.add_argument("--y1", type=int, default=470)
+    ap.add_argument("w"); ap.add_argument("i"); ap.add_argument("--y0", type=int, help="既定＝高さ720で280の比"); ap.add_argument("--y1", type=int, help="既定＝高さ720で470の比")
     ap.add_argument("--th", type=int, default=60); ap.add_argument("--out")
     g = ap.parse_args()
+    global W, H
+    G = geo(g.w); W, H = G["W"], G["H"]
+    if g.y0 is None: g.y0 = round(280 * H / 720)
+    if g.y1 is None: g.y1 = round(470 * H / 720)
     src = f"{g.w}/cuts/{g.i}.mp4"; out = g.out or f"{g.w}/tmp/decap/{g.i}.mp4"
     os.makedirs(os.path.dirname(out), exist_ok=True)
     r = subprocess.run(["ffmpeg", "-v", "error", "-i", src, "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
@@ -28,7 +34,7 @@ def main():
         m = cv2.dilate(m, np.ones((7, 7), np.uint8))
         if m.any():
             F[j] = cv2.inpaint(f, m, 6, cv2.INPAINT_TELEA)
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-",
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", G["FPS_FF"], "-i", "-",
                           "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", out], stdin=subprocess.PIPE)
     p.stdin.write(F.tobytes()); p.stdin.close(); p.wait()
     print("書いた", out)

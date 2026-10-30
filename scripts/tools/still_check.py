@@ -2,16 +2,22 @@
 python3 still_check.py <作業> <うちの書き出し_noaudio.mp4> [--out shirabe/静止表.json]
 - 考え方：一枚絵を拡大・移動・流れ（flow）で曲げた物は、前のコマを流れで曲げると次のコマがほぼ再現できる＝「新しい中身」N が出ん。
   本物の動画は瞬き・口・奥行き・照明・物の出入りで N が出る。手本とうちの N を比べる（motion_kind の L は flow で曲げた絵も動きと数えてまう）
-- N＝隣のコマ同士で、DIS の流れで前のコマを曲げた残りの差（0〜255 の平均・320x180 白黒・字幕の帯と端 8px を外す・上位 10% の場所の平均＝局所の変化を拾う）
+- N＝隣のコマ同士で、DIS の流れで前のコマを曲げた残りの差（0〜255 の平均・geo の SW x SH（r2 は 320x180）白黒・字幕の帯と端 8px を外す・上位 10% の場所の平均＝局所の変化を拾う）
 - 替わる瞬間（N≥35）は外して、手本がつながっとるコマの組だけで比べる。替わった数 sw も出す
 - 判定：手本の N が 2.0 以上（本物の動き）なのに、うちの N が手本の 45% 未満＝🔴一枚絵／45〜70%＝🟡弱い。切り替えの前後 1 コマは外す
 """
 import argparse, glob, json, os, sys
 import cv2, numpy as np
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo
 
-W, H, FPS = 320, 180, 29.97
+W, H, FPS = 320, 180, 29.97   # __main__ で geo の SW・SH・FPS に替わる（10/30）
 DIS = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
-mask = np.ones((H, W), bool); mask[int(H * .416):int(H * .583)] = False; mask[:8] = mask[-8:] = False; mask[:, :8] = mask[:, -8:] = False
+def _mask():
+    m = np.ones((H, W), bool); m[int(H * .416):int(H * .583)] = False; m[:8] = m[-8:] = False; m[:, :8] = m[:, -8:] = False; return m
+
+
+mask = _mask()
 
 
 def frames(p):
@@ -46,6 +52,7 @@ def cut_n(R, O, f0, f1):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("ours"); ap.add_argument("--out", default="shirabe/静止表.json")
     a = ap.parse_args(); w = os.path.abspath(a.w)
+    GG = geo(w); W, H, FPS = GG["SW"], GG["SH"], GG["FPS"]; mask = _mask()
     R = frames(glob.glob(f"{w}/ref/*.mp4")[0]); O = frames(a.ours)
     rows = []
     for l in open(f"{w}/eye/segs.txt"):

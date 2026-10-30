@@ -9,13 +9,15 @@ import argparse, glob, json, os, shutil, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from retime import rd
-FPS = 29.97
+import retime
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("--ids", default=""); ap.add_argument("--auto", action="store_true"); ap.add_argument("--write", action="store_true")
 a = ap.parse_args(); w = os.path.abspath(a.w)
+retime.use_geo(w); GG = geo(w); FPS = GG["FPS"]; MW, MH = half(w)
 LP = f"{w}/proj/src/shot_look.json"; L = json.load(open(LP))
 GR = json.load(open(f"{w}/proj/src/green.json")); OFF = json.load(open(f"{w}/proj/src/layer_off.json"))
-RA = rd(glob.glob(f"{w}/ref/*.mp4")[0], w=640, h=360)
-m = np.ones((360, 640), bool); m[150:210] = False
+RA = rd(glob.glob(f"{w}/ref/*.mp4")[0], w=MW, h=MH)
+m = np.ones((MH, MW), bool); m[round(150 * MH / 360):round(210 * MH / 360)] = False  # 字幕の帯（r2 の行を高さの比で）
 
 
 def cover(f0, f1):
@@ -31,7 +33,7 @@ def edge(g):
 
 
 def blur(x, b):
-    return cv2.GaussianBlur(x, (0, 0), 0.5 * (b * b + 0.25) ** 0.5)  # Remotion の blur(px) は 1280 基準＝640 では半分・全体の look.json blur 0.5 も重ねる
+    return cv2.GaussianBlur(x, (0, 0), MW / GG["W"] * (b * b + 0.25) ** 0.5)  # Remotion の blur(px) は手本の画素基準＝半分の大きさでは半分・全体の look.json blur 0.5 も重ねる
 
 
 ids = set(a.ids.split(",")) if a.ids else None
@@ -44,7 +46,7 @@ for k, v in L.items():
     if k not in segs or not os.path.exists(f"{w}/cuts/{k}.mp4"): continue
     f0 = round(segs[k][0] * FPS); n = v["f1"] - v["f0"] + 1; s = v["f0"] - f0
     if cover(v["f0"], v["f1"] + 1) > 0.5: print(k, "一枚絵が覆う＝飛ばす"); continue
-    C = rd(f"{w}/cuts/{k}.mp4", w=640, h=360)[s:s + n]; R = RA[v["f0"]:v["f0"] + len(C)]
+    C = rd(f"{w}/cuts/{k}.mp4", w=MW, h=MH)[s:s + n]; R = RA[v["f0"]:v["f0"] + len(C)]
     if len(C) < 2: continue
     X = np.concatenate([c[m] for c in C]).astype(np.float32) / 255; Y = np.concatenate([r[m] for r in R]).astype(np.float32) / 255
     # 色は BGR の並び・shot_look は RGB の並び

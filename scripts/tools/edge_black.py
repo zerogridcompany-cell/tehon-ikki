@@ -9,12 +9,14 @@ import cv2
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+from geo import geo, half
 
-W, H, FPS = 1280, 720, 29.97
+W, H, FPS = 1280, 720, 29.97   # main で geo(<作業>) に替わる（10/30）
+FPS_FF, MW, MH = "2997/100", 640, 360
 
 
 def read(p, ss, n):
-    o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0, ss):.4f}", "-i", p, "-frames:v", str(n), "-vf", f"fps=2997/100,scale={W}:{H}",
+    o = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0, ss):.4f}", "-i", p, "-frames:v", str(n), "-vf", f"fps={FPS_FF},scale={W}:{H}",
                         "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True).stdout
     return np.frombuffer(o, np.uint8).reshape(-1, H, W, 3).copy()
 
@@ -30,13 +32,15 @@ def run_len(dark):
 
 
 def g(x):
-    return cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360))
+    return cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH))
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("w"); ap.add_argument("--ids", required=True); ap.add_argument("--th", type=float, default=18); ap.add_argument("--min", type=float, default=0.003)
     a = ap.parse_args()
+    global W, H, FPS, FPS_FF, MW, MH
+    G = geo(a.w); W, H, FPS, FPS_FF = G["W"], G["H"], G["FPS"], G["FPS_FF"]; MW, MH = half(a.w)
     ref = glob.glob(f"{a.w}/ref/*.mp4")[0]
     shots = {str(s["i"]): s for s in json.load(open(f"{a.w}/eye/out.json"))["shots"]}
     for i in a.ids.split(","):
@@ -49,7 +53,7 @@ def main():
         N = O[:n].copy()
         for k in range(n):
             gy = cv2.cvtColor(R[k], cv2.COLOR_BGR2GRAY).astype(np.float32)
-            gy[300:420] = 255  # 字幕の帯は数えん
+            gy[round(300 * H / 720):round(420 * H / 720)] = 255  # 字幕の帯は数えん（r2 の 300〜420 行を高さの比で）
             t, b = run_len(gy.mean(1) < a.th); l, r = run_len(gy.mean(0) < a.th)
             m = np.zeros((H, W), bool)
             if t < H // 3: m[:t] = True
@@ -64,7 +68,7 @@ def main():
         if ok:
             if not os.path.exists(cp + ".bak_edge"):
                 shutil.copy(cp, cp + ".bak_edge")
-            p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-",
+            p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF, "-i", "-",
                                   "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cp + ".tmp.mp4"], stdin=subprocess.PIPE)
             p.stdin.write(N.tobytes()); p.stdin.close(); p.wait(); shutil.move(cp + ".tmp.mp4", cp)
 

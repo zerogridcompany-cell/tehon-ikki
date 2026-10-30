@@ -2,7 +2,7 @@
 build: python3 clip_index.py build <動画…> --out tmp/clip_index.npz [--fps 1]
 query: python3 clip_index.py query <作業> <手本のコマ> [--index tmp/clip_index.npz] [--top 11] [--text "英語の説明"]
 """
-import argparse, glob, subprocess, sys
+import argparse, glob, os, subprocess, sys
 import cv2, numpy as np, torch
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
@@ -27,9 +27,13 @@ if a.mode == "build":
         if buf: E.append(emb(buf))
         print(v, i, flush=True)
     np.savez(a.out, meta=np.array(meta, dtype=object), e=np.concatenate(E)); sys.exit()
-w, f = a.args[0], int(a.args[1]); Z = np.load(f"{w}/{a.index}", allow_pickle=True); meta, E = Z["meta"], Z["e"]
-r = subprocess.run(["ffmpeg", "-v", "error", "-i", glob.glob(f"{w}/ref/*.mp4")[0], "-vf", f"fps=2997/100,select=eq(n\\,{f}),scale=640:360", "-vsync", "0", "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
-im = np.frombuffer(r.stdout, np.uint8).reshape(360, 640, 3); q = emb([im])[0]
+w, f = a.args[0], int(a.args[1])
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+GG = geo(w); SW, SH = GG["SW"], GG["SH"]; MW, MH = half(w)
+Z = np.load(f"{w}/{a.index}", allow_pickle=True); meta, E = Z["meta"], Z["e"]
+r = subprocess.run(["ffmpeg", "-v", "error", "-i", glob.glob(f"{w}/ref/*.mp4")[0], "-vf", f"fps={GG['FPS_FF']},select=eq(n\\,{f}),scale={MW}:{MH}", "-vsync", "0", "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
+im = np.frombuffer(r.stdout, np.uint8).reshape(MH, MW, 3); q = emb([im])[0]
 if a.text:
     with torch.no_grad():
         t = M.get_text_features(**P(text=[a.text], return_tensors="pt", padding=True).to(dev)); q = q + torch.nn.functional.normalize(t, dim=-1).cpu().numpy()[0]; q /= np.linalg.norm(q)
@@ -39,11 +43,11 @@ for i in np.argsort(-sc):
     if any(v == sv and abs(t - st) < 3 for sv, st in seen): continue
     seen.append((v, t)); idx.append(i)
     if len(idx) >= a.top: break
-cells = [cv2.resize(im, (320, 180))]
+cells = [cv2.resize(im, (SW, SH))]
 for i in idx:
     v, t = meta[i]
-    rr = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", v, "-frames:v", "1", "-vf", "scale=320:180", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True).stdout
-    cc = np.frombuffer(rr, np.uint8).reshape(180, 320, 3).copy() if len(rr) == 320 * 180 * 3 else np.zeros((180, 320, 3), np.uint8)
+    rr = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(t), "-i", v, "-frames:v", "1", "-vf", f"scale={SW}:{SH}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True).stdout
+    cc = np.frombuffer(rr, np.uint8).reshape(SH, SW, 3).copy() if len(rr) == SW * SH * 3 else np.zeros((SH, SW, 3), np.uint8)
     cv2.putText(cc, f"{len(cells)} {v.split('/')[-1][:12]} {t:.0f}s {sc[i]:.2f}", (4, 14), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1); cells.append(cc)
     print(len(cells) - 1, v, round(float(t), 1), round(float(sc[i]), 3))
 while len(cells) % 4: cells.append(np.zeros_like(cells[0]))

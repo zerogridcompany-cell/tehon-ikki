@@ -2,19 +2,29 @@
 全部のカットを手元で採点→良くなった物だけ入れる→最後に1回だけ書き出す（版ごとに書き出さん）。
 
 python3 cut_score.py <作業フォルダ> [--ids 59,93] [--file 59=cuts_try/k59.mp4] [--out tmp/cutscore.json] [--dir 試しの置き場]
-- 点＝灰色 640x360 の SSIM（mane_check と同じ物差しに近い）の1コマごとの平均
+- 点＝灰色の半分の大きさ（1280x720 なら 640x360・geo.half）の SSIM（mane_check と同じ物差しに近い）の1コマごとの平均
 """
-import argparse, glob, json, os, subprocess
+import argparse, glob, json, os, subprocess, sys
 import cv2
 import numpy as np
 
-W, H = 640, 360
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+
+W, H = 640, 360        # use_geo(<作業>) で手本の半分の大きさに替わる（10/30 geo）
 FPS = 29.97
+FPS_FF = "2997/100"
+
+
+def use_geo(w):
+    """手本の大きさ・fps を geo から読んで frames() に効かせる（frames を使う道具は最初に1回呼ぶ）"""
+    global W, H, FPS, FPS_FF
+    G = geo(w); W, H = half(w); FPS, FPS_FF = G["FPS"], G["FPS_FF"]
 
 
 def frames(p, ss=None, n=None):
     cmd = ["ffmpeg", "-v", "error"] + (["-ss", f"{ss:.4f}"] if ss is not None else []) + ["-i", p]
-    cmd += (["-frames:v", str(n)] if n else []) + ["-vf", f"fps=2997/100,scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "gray", "-"]
+    cmd += (["-frames:v", str(n)] if n else []) + ["-vf", f"fps={FPS_FF},scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "gray", "-"]
     r = subprocess.run(cmd, capture_output=True)
     return np.frombuffer(r.stdout, np.uint8).reshape(-1, H, W)
 
@@ -32,6 +42,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("w"); ap.add_argument("--ids"); ap.add_argument("--file", action="append", default=[]); ap.add_argument("--out"); ap.add_argument("--dir", help="<dir>/<番号>.mp4 があればそれを採点")
     g = ap.parse_args()
+    use_geo(g.w)
     ref = glob.glob(f"{g.w}/ref/*.mp4")[0]
     shots = sorted(json.load(open(f"{g.w}/eye/out.json"))["shots"], key=lambda s: float(s["t0"]))
     files = dict(x.split("=", 1) for x in g.file)

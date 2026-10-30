@@ -7,7 +7,8 @@ import argparse, glob, json, os, shutil, subprocess, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tk_common import ssim_fast
-W, H = 1280, 720
+from geo import geo, half
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
 
 
 def rd(p, a=None, b=None):
@@ -23,11 +24,13 @@ def g(im, w=640):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("i"); ap.add_argument("--frames"); ap.add_argument("--min", type=float, default=0.003); ap.add_argument("--write", action="store_true"); ap.add_argument("--smooth", type=int, default=0, help="0＝コマごとに良い時だけ／N＝全コマの変形を N コマでならして全部にかける（ガタつかん）")
     a = ap.parse_args()
+    global W, H
+    G = geo(a.w); W, H = G["W"], G["H"]; MW, MH = half(a.w)
     s = [s for s in json.load(open(f"{a.w}/eye/out.json"))["shots"] if str(s["i"]) == str(a.i)][0]
-    f0 = int(round(s["t0"] * 29.97)); src = f"{a.w}/cuts/{a.i}.mp4"
+    f0 = int(round(s["t0"] * G["FPS"])); src = f"{a.w}/cuts/{a.i}.mp4"
     F = rd(src); R = rd(sorted(glob.glob(f"{a.w}/ref/*.mp4"))[0], f0, f0 + len(F)); n = min(len(F), len(R))
     lo, hi = (map(int, a.frames.split("-")) if a.frames else (f0, f0 + n))
-    mk = np.ones((360, 640), np.uint8); mk[150:200] = 0
+    h640 = 640 * H // W; mk = np.ones((h640, 640), np.uint8); mk[round(150 * h640 / 360):round(200 * h640 / 360)] = 0  # g() と同じ大きさ・字幕の帯は比で
     out = list(F); gain = 0; used = 0; prev = None; Ms = {}
     for j in range(n):
         if not (lo <= f0 + j <= hi): continue
@@ -45,9 +48,9 @@ def main():
                 continue
             A = M.copy(); A[:, 2] *= W / 640
             wp = cv2.warpAffine(F[j], A, (W, H), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REPLICATE)
-            sc = ssim_fast(cv2.cvtColor(cv2.resize(R[j], (640, 360)), cv2.COLOR_BGR2GRAY), cv2.cvtColor(cv2.resize(wp, (640, 360)), cv2.COLOR_BGR2GRAY))
+            sc = ssim_fast(cv2.cvtColor(cv2.resize(R[j], (MW, MH)), cv2.COLOR_BGR2GRAY), cv2.cvtColor(cv2.resize(wp, (MW, MH)), cv2.COLOR_BGR2GRAY))
             if best is None or sc > best[0]: best = (sc, wp, M)
-        s0 = ssim_fast(cv2.cvtColor(cv2.resize(R[j], (640, 360)), cv2.COLOR_BGR2GRAY), cv2.cvtColor(cv2.resize(F[j], (640, 360)), cv2.COLOR_BGR2GRAY))
+        s0 = ssim_fast(cv2.cvtColor(cv2.resize(R[j], (MW, MH)), cv2.COLOR_BGR2GRAY), cv2.cvtColor(cv2.resize(F[j], (MW, MH)), cv2.COLOR_BGR2GRAY))
         if a.smooth:
             Ms[j] = best[2] if best else None
         elif best and best[0] > s0 + a.min:
@@ -63,7 +66,7 @@ def main():
                 out[j] = cv2.warpAffine(F[j], A, (W, H), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REPLICATE); used += 1
     print(f"{a.i} 入れたコマ {used}/{n} 上がり合計 {gain:.2f}（コマ分）")
     o = f"{a.w}/tmp/fw/{a.i}.mp4"; os.makedirs(os.path.dirname(o), exist_ok=True)
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", o], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", G["FPS_FF"], "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", o], stdin=subprocess.PIPE)
     p.stdin.write(np.array(out).tobytes()); p.stdin.close(); p.wait(); print("書いた", o)
     if a.write:
         if not os.path.exists(src + ".bak_fw"): shutil.copy(src, src + ".bak_fw")

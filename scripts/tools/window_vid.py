@@ -13,11 +13,14 @@ import cv2
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+from geo import geo, half
 
-W, H, FPS = 1280, 720, 29.97
+W, H, FPS = 1280, 720, 29.97   # main で geo(<作業>) に替わる（10/30）
+FPS_FF, MW, MH = "2997/100", 640, 360
 
 
-def read(p, ss=None, n=None, fps="2997/100"):
+def read(p, ss=None, n=None, fps=None):
+    fps = fps or FPS_FF
     img = p.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
     cmd = ["ffmpeg", "-v", "error"] + (["-loop", "1", "-t", "2"] if img else (["-ss", f"{ss:.4f}"] if ss is not None else [])) + ["-i", p] + (["-frames:v", str(n)] if n else [])
     cmd += ["-vf", f"fps={fps},scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"]
@@ -34,7 +37,7 @@ def box(img, thr=40):
 
 
 def g640(a):
-    return cv2.resize(cv2.cvtColor(a, cv2.COLOR_BGR2GRAY), (640, 360))
+    return cv2.resize(cv2.cvtColor(a, cv2.COLOR_BGR2GRAY), (MW, MH))
 
 
 def main():
@@ -45,13 +48,15 @@ def main():
     ap.add_argument("--erase", default="", help="元の字を消す箱 x,y,w,h;…（元の画素・白い字だけ塗り直す）"); ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
     w = os.path.abspath(a.w)
+    global W, H, FPS, FPS_FF, MW, MH
+    GG = geo(w); W, H, FPS, FPS_FF = GG["W"], GG["H"], GG["FPS"], GG["FPS_FF"]; MW, MH = half(w)
     seg = [l for l in open(f"{w}/eye/segs.txt") if l.startswith(f"{a.cut}:")][0]
     c0 = round(float(seg.split(":")[1].split("-")[0]) * FPS)
     cutp = f"{w}/cuts/{a.cut}.mp4"
     C = read(cutp)
     n = a.f1 - a.f0
     R = read(glob.glob(f"{w}/ref/*.mp4")[0])[a.f0:a.f1]
-    S = read(a.src, a.t0, n + 4, fps="2997/100")
+    S = read(a.src, a.t0, n + 4, fps=FPS_FF)
     cx, cy, cw, ch = map(int, a.crop.split(","))
     for e in filter(None, a.erase.split(";")):
         ex, ey, ew, eh = map(int, e.split(","))
@@ -115,11 +120,11 @@ def main():
         out[j] = np.clip(base, 0, 255).astype(np.uint8)
         before.append(ssim(g640(r), g640(C[j]))); after.append(ssim(g640(r), g640(out[j])))
     print(f"{a.cut} {a.f0}-{a.f1}: コマ平均 {np.mean(before):.4f} → {np.mean(after):.4f}")
-    cv2.imwrite(f"{w}/tmp/wv_{a.cut}.jpg", np.hstack([cv2.resize(R[n // 2], (640, 360)), cv2.resize(out[a.f0 + n // 2 - c0], (640, 360))]))
+    cv2.imwrite(f"{w}/tmp/wv_{a.cut}.jpg", np.hstack([cv2.resize(R[n // 2], (MW, MH)), cv2.resize(out[a.f0 + n // 2 - c0], (MW, MH))]))
     if a.dry or np.mean(after) <= np.mean(before) + 0.005:
         print("書かん（dry か 上がらん）"); return
     shutil.copy(cutp, cutp + ".bak_wv")
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-",
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF, "-i", "-",
                           "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", cutp], stdin=subprocess.PIPE)
     p.stdin.write(out.tobytes()); p.stdin.close(); p.wait()
     print("書いた", cutp)

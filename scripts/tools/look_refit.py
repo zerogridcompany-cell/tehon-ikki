@@ -1,5 +1,5 @@
 """今の書き出しから、カットごとに色（色ごとに1次＝ゲイン・オフセット）を手本へ当て直し、今の shot_look に重ねる。
-color_fit と違い、点は 640x360 の白黒 SSIM（mane_check と同じ物差し）で見込み、上がるカットだけ入れる。中身を替えたカットの古い色も直る。
+color_fit と違い、点は手本の半分の大きさ（r2 は 640x360）の白黒 SSIM（mane_check と同じ物差し）で見込み、上がるカットだけ入れる。中身を替えたカットの古い色も直る。
 
 python3 look_refit.py <作業> <書き出し.mp4> [--min 0.005] [--dry]
 - ゲインは 0.6〜1.6・オフセットは ±0.25 の中だけ。前の shot_look は shot_look.json.bak_refit に控え
@@ -10,16 +10,20 @@ import cv2
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
+from geo import geo, half
+FPS_FF, MW, MH = "2997/100", 640, 360   # main で geo に替わる（10/30）
 
 
 def rgb(p):
-    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", "fps=2997/100,scale=640:360", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
-    return np.frombuffer(r.stdout, np.uint8).reshape(-1, 360, 640, 3)
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", f"fps={FPS_FF},scale={MW}:{MH}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True)
+    return np.frombuffer(r.stdout, np.uint8).reshape(-1, MH, MW, 3)
 
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--min", type=float, default=0.005); ap.add_argument("--dry", action="store_true")
     a = ap.parse_args(); w = os.path.abspath(a.w)
+    global FPS_FF, MW, MH
+    G = geo(w); FPS_FF = G["FPS_FF"]; MW, MH = half(w); FPS = G["FPS"]
     R = rgb(glob.glob(f"{w}/ref/*.mp4")[0]); V = rgb(os.path.join(w, a.out)); n = min(len(R), len(V))
     gray = lambda x: cv2.cvtColor(np.clip(x, 0, 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
     lab = lambda x: cv2.cvtColor(np.uint8([[np.clip(x.reshape(-1, 3).mean(0), 0, 255)]]), cv2.COLOR_RGB2LAB)[0, 0].astype(float) * [100 / 255, 1, 1]
@@ -27,7 +31,7 @@ def main():
     segs = []
     for l in open(f"{w}/eye/segs.txt"):
         if ":" in l:
-            k, v = l.split(":"); s0, s1 = map(float, v.split("-")); segs.append((k.strip(), round(s0 * 29.97), min(n, round(s1 * 29.97))))
+            k, v = l.split(":"); s0, s1 = map(float, v.split("-")); segs.append((k.strip(), round(s0 * FPS), min(n, round(s1 * FPS))))
     tot = 0; changed = []
     for k, f0, f1 in segs:
         if f1 - f0 < 2: continue

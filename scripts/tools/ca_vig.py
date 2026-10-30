@@ -8,7 +8,10 @@ import argparse, glob, json, os, shutil, subprocess, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tk_common import ssim_fast
-W, H = 1280, 720
+from geo import geo, half
+W, H = 1280, 720   # main で geo(<作業>) に替わる（10/30）
+FPS_FF = "2997/100"
+MW, MH = 640, 360
 
 
 def rd(p, a=None, b=None):
@@ -30,7 +33,7 @@ def ca_measure(frames):
             e = 0
             for f in frames:
                 g = f[..., 1].astype(np.float32); x = scale_ch(f[..., c].astype(np.float32), -k)
-                gm = np.abs(cv2.Sobel(g, cv2.CV_32F, 1, 0)) + np.abs(cv2.Sobel(g, cv2.CV_32F, 0, 1)); gm[300:400] = 0
+                gm = np.abs(cv2.Sobel(g, cv2.CV_32F, 1, 0)) + np.abs(cv2.Sobel(g, cv2.CV_32F, 0, 1)); gm[round(300 * H / 720):round(400 * H / 720)] = 0  # 字幕の帯（r2 の行を高さの比で）
                 w = gm > np.percentile(gm, 90)
                 d = (x - g); d = d - d[w].mean()
                 e += float(np.abs(d[w]).mean())
@@ -42,14 +45,16 @@ def ca_measure(frames):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("i"); ap.add_argument("--write", action="store_true"); ap.add_argument("--min", type=float, default=0.002)
     a = ap.parse_args()
+    global W, H, FPS_FF, MW, MH
+    G = geo(a.w); W, H, FPS_FF = G["W"], G["H"], G["FPS_FF"]; MW, MH = half(a.w)
     s = [s for s in json.load(open(f"{a.w}/eye/out.json"))["shots"] if str(s["i"]) == str(a.i)][0]
-    f0 = int(round(s["t0"] * 29.97)); src = f"{a.w}/cuts/{a.i}.mp4"
+    f0 = int(round(s["t0"] * G["FPS"])); src = f"{a.w}/cuts/{a.i}.mp4"
     F = rd(src); R = rd(sorted(glob.glob(f"{a.w}/ref/*.mp4"))[0], f0, f0 + len(F)); n = min(len(F), len(R))
     pick = sorted(set(np.linspace(0, n - 1, min(4, n)).astype(int)))
     kr, kb = ca_measure([R[j] for j in pick]); kr0, kb0 = ca_measure([F[j] for j in pick])
     dr, db = kr - kr0, kb - kb0
     yy, xx = np.mgrid[0:H, 0:W]; rr = (((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2)
-    m = np.ones((H, W), bool); m[300:400] = False
+    m = np.ones((H, W), bool); m[round(300 * H / 720):round(400 * H / 720)] = False
     lr = np.mean([cv2.cvtColor(R[j], cv2.COLOR_BGR2GRAY) for j in pick], 0).astype(np.float32) + 1
     lo = np.mean([cv2.cvtColor(F[j], cv2.COLOR_BGR2GRAY) for j in pick], 0).astype(np.float32) + 1
     lr = cv2.GaussianBlur(lr, (0, 0), 25); lo = cv2.GaussianBlur(lo, (0, 0), 25)
@@ -63,7 +68,7 @@ def main():
         if v: o = o * gmap[..., None]
         if c: o[..., 2] = scale_ch(o[..., 2], dr); o[..., 0] = scale_ch(o[..., 0], db)
         return np.clip(o, 0, 255).astype(np.uint8)
-    gs = lambda x: cv2.cvtColor(cv2.resize(x, (640, 360)), cv2.COLOR_BGR2GRAY)
+    gs = lambda x: cv2.cvtColor(cv2.resize(x, (MW, MH)), cv2.COLOR_BGR2GRAY)
     def score(fn):
         return float(np.mean([ssim_fast(gs(R[j]), gs(fn(F[j]))) for j in range(n)]))
     s0 = score(lambda f: f); sv = score(lambda f: fx(f, True, False)); sc = score(lambda f: fx(f, False, True)); sb = score(lambda f: fx(f, True, True))
@@ -73,7 +78,7 @@ def main():
     if how is None or sbest < s0 + a.min: return
     out = [fx(f, *how) for f in F]
     o = f"{a.w}/tmp/cav/{a.i}.mp4"; os.makedirs(os.path.dirname(o), exist_ok=True)
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", o], stdin=subprocess.PIPE)
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF, "-i", "-", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", o], stdin=subprocess.PIPE)
     p.stdin.write(np.array(out).tobytes()); p.stdin.close(); p.wait(); print("書いた", o)
     if a.write:
         if not os.path.exists(src + ".bak_cav"): shutil.copy(src, src + ".bak_cav")

@@ -11,11 +11,13 @@ import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import ssim
 from retime import rd, looks, post_f
+import retime
+from geo import geo, half
 
-FPS = 29.97
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("cut"); ap.add_argument("--src"); ap.add_argument("--start", type=float)
 ap.add_argument("--hf", type=float, default=2.0, help="細かい所を取るぼかしの σ"); ap.add_argument("--write", action="store_true")
 a = ap.parse_args(); w = os.path.abspath(a.w); c = a.cut
+retime.use_geo(w); GG = geo(w); FPS = GG["FPS"]; MW, MH = half(w)
 seg = [l for l in open(f"{w}/eye/segs.txt") if l.startswith(f"{c}:")][0]
 s0, s1 = map(float, seg.split(":")[1].split("-")); f0, f1 = round(s0 * FPS), round(s1 * FPS)
 R = rd(glob.glob(f"{w}/ref/*.mp4")[0], sel=(f0, f1 - 1)); n = len(R); LK = looks(w, f0, n)
@@ -41,13 +43,13 @@ def edge(img):
     return float(np.percentile(m[band], 90))
 
 
-tiny = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (160, 90), interpolation=cv2.INTER_AREA).astype(np.float32)
+tiny = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (GG["SW"] // 2, GG["SH"] // 2), interpolation=cv2.INTER_AREA).astype(np.float32)
 # 元の全コマを今のカットの大きさに（まず縦横比を保って全体を入れる＝ECC が後で合わせる）
 sh, sw = S.shape[1:3]
 out = C.copy(); rep = []; Wprev = None
-SIFT = cv2.SIFT_create(2000); BF = cv2.BFMatcher(); fs = 360 / sh
-small = lambda x: cv2.resize(x, (round(sw * fs), 360), interpolation=cv2.INTER_AREA)
-g640 = lambda x: cv2.cvtColor(cv2.resize(x, (640, 360), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
+SIFT = cv2.SIFT_create(2000); BF = cv2.BFMatcher(); fs = MH / sh
+small = lambda x: cv2.resize(x, (round(sw * fs), MH), interpolation=cv2.INTER_AREA)
+g640 = lambda x: cv2.cvtColor(cv2.resize(x, (MW, MH), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
 
 
 def sift_aff(gc, gs):
@@ -73,7 +75,7 @@ rate = sfps / FPS
 
 
 def ncc_al(gc, x, Wm):
-    al = cv2.warpAffine(cv2.cvtColor(small(x), cv2.COLOR_BGR2GRAY), Wm, (640, 360), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderValue=0).astype(np.float32)
+    al = cv2.warpAffine(cv2.cvtColor(small(x), cv2.COLOR_BGR2GRAY), Wm, (MW, MH), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderValue=0).astype(np.float32)
     a_ = cv2.GaussianBlur(al, (0, 0), 2.5); b_ = cv2.GaussianBlur(gc.astype(np.float32), (0, 0), 2.5)
     a_ = a_ - a_.mean(); b_ = b_ - b_.mean(); return float((a_ * b_).sum() / (np.sqrt((a_ * a_).sum() * (b_ * b_).sum()) + 1e-6))
 
@@ -99,7 +101,7 @@ for j in range(n):
     except cv2.error:
         okecc = False
     Wf = np.vstack([Wm, [0, 0, 1]]).astype(np.float64)
-    M = np.diag([1 / fs, 1 / fs, 1]) @ Wf @ np.diag([640 / W, 360 / H, 1])  # 今(原寸)→元(原寸)
+    M = np.diag([1 / fs, 1 / fs, 1]) @ Wf @ np.diag([MW / W, MH / H, 1])  # 今(原寸)→元(原寸)
     al = cv2.warpAffine(sharp_full, M[:2], (W, H), flags=cv2.INTER_LANCZOS4 | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REFLECT).astype(np.float32)
     hf = al - cv2.GaussianBlur(al, (0, 0), a.hf)
     r_e = edge(R[j]); base = ssim(cv2.cvtColor(R[j], cv2.COLOR_BGR2GRAY), cv2.cvtColor(post_f(cur, LK[j]), cv2.COLOR_BGR2GRAY))
@@ -119,6 +121,6 @@ os.makedirs(f"{w}/shirabe/detail", exist_ok=True)
 json.dump(rep, open(f"{w}/shirabe/detail/{c}.json", "w"), ensure_ascii=False, indent=1)
 dst = cp if a.write else f"{w}/tmp/detail_{c}.mp4"
 if a.write and not os.path.exists(cp + ".bak_detail"): shutil.copy(cp, cp + ".bak_detail")
-p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-",
+p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", GG["FPS_FF"], "-i", "-",
                       "-c:v", "libx264", "-crf", "10", "-pix_fmt", "yuv420p", dst], stdin=subprocess.PIPE)
 p.stdin.write(out.tobytes()); p.stdin.close(); p.wait(); print("書いた", dst)

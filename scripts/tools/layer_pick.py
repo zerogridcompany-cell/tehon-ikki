@@ -2,13 +2,14 @@
 外すと上がる層だけを proj/src/layer_off.json に書く（カットの範囲ごと）。
 
 python3 layer_pick.py <作業フォルダ> <全部入り.mp4> <層名=試し.mp4 …> [--min 0.005] [--out proj/src/layer_off.json]
-- 点＝cut_score と同じ灰色 640x360 の SSIM（1コマごと）。1本ずつ全部読んで比べる（重さ＝1本 約0.5GB）
+- 点＝cut_score と同じ灰色・手本の半分（r2 は 640x360）の SSIM（1コマごと）。1本ずつ全部読んで比べる（重さ＝1本 約0.5GB）
 - 表＝tmp/layer_pick.json（カット・全部入り・層ごとの点・選んだ外す層）
 """
 import argparse, glob, json, sys
 import numpy as np
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from cut_score import frames, ssim, FPS
+from cut_score import frames, ssim
+import cut_score
 
 
 def per_frame(R, O):
@@ -21,6 +22,7 @@ def main():
     ap.add_argument("w"); ap.add_argument("full"); ap.add_argument("vars", nargs="+"); ap.add_argument("--min", type=float, default=0.005)
     ap.add_argument("--out", default="proj/src/layer_off.json")
     g = ap.parse_args()
+    cut_score.use_geo(g.w); FPS = cut_score.FPS  # 10/30 geo
     ref = glob.glob(f"{g.w}/ref/*.mp4")[0]
     R = frames(ref)
     shots = sorted(json.load(open(f"{g.w}/eye/out.json"))["shots"], key=lambda s: float(s["t0"]))

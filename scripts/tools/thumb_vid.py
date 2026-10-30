@@ -5,12 +5,13 @@ python3 thumb_vid.py <作業> [--max 12]
 import argparse, json, os, re, subprocess, sys, time
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("--max", type=int, default=12); a = ap.parse_args()
 w = os.path.abspath(a.w); T = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, T); from geo import geo; FPS = geo(w)["FPS"]  # 10/30 geo
 p = f"{w}/src/hi_img.json"
 if not os.path.exists(p): print("src/hi_img.json が無い＝サムネイル由来のカット無し"); sys.exit(0)
 d = json.load(open(p)); segs = {}
 for l in open(f"{w}/eye/segs.txt"):
     if ":" in l:
-        k, v = l.split(":"); s0, s1 = map(float, v.split("-")); segs[k.strip()] = (round(s0 * 29.97), round(s1 * 29.97))
+        k, v = l.split(":"); s0, s1 = map(float, v.split("-")); segs[k.strip()] = (round(s0 * FPS), round(s1 * FPS))
 todo = []
 for k, v in d.items():
     m = re.search(r"(?:vi/|v=|youtu\.be/|shorts/)([A-Za-z0-9_-]{11})", (v.get("url", "") + " " + v.get("page", "")))

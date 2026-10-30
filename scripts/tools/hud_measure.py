@@ -9,10 +9,11 @@ import argparse, glob, json, os, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from retime import rd
+import retime
 
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("f0", type=int); ap.add_argument("f1", type=int)
 ap.add_argument("--clean"); ap.add_argument("--out", default="proj/src/hud.json"); ap.add_argument("--print", action="store_true")
-a = ap.parse_args(); w = os.path.abspath(a.w)
+a = ap.parse_args(); w = os.path.abspath(a.w); retime.use_geo(w)  # 10/30 geo
 R = rd(glob.glob(f"{w}/ref/*.mp4")[0], sel=(a.f0, a.f1))
 C = rd(os.path.join(w, a.clean), sel=(a.f0, a.f1)) if a.clean else None
 

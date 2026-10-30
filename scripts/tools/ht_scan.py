@@ -3,11 +3,12 @@ python3 ht_scan.py <作業> <うちの書き出し.mp4> [--period 2.67]
 - カットの真ん中のコマの左上 512x256 の周波数で、その周期の山の強さ（中央値との比）を手本とうちで比べる
 - 手本 >40 かつ うちの3倍以上＝網点が足りん。足し方＝72・46 の型（tmp/b72_S.npy：0.985+1.008×S を σ1.5 のぼかしに掛ける）。層だけのカットは Remotion の filter#ht（R2.tsx・ht.json）
 """
-import argparse, glob, os
+import argparse, glob, os, sys
 import cv2, numpy as np
-FPS = 29.97
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--period", type=float, default=2.67)
-a = ap.parse_args(); w = os.path.abspath(a.w)
+a = ap.parse_args(); w = os.path.abspath(a.w); FPS = geo(w)["FPS"]
 
 
 def power(cap, n):

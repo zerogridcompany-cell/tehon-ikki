@@ -9,8 +9,10 @@ import argparse, glob, json, os, shutil, subprocess, sys
 import cv2, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import frames, ssim
+import cut_score
+from geo import geo, half
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--comp", default="Main"); ap.add_argument("--min", type=float, default=0.05)
-a = ap.parse_args(); w = os.path.abspath(a.w); W, H = 1280, 720
+a = ap.parse_args(); w = os.path.abspath(a.w); cut_score.use_geo(w); G = geo(w); W, H = G["W"], G["H"]; MW, MH = half(w)
 ref = glob.glob(f"{w}/ref/*.mp4")[0]
 Rg = frames(ref); Vg = frames(os.path.join(w, a.out)); n = min(len(Rg), len(Vg))
 mr = Rg[:n].reshape(n, -1).mean(1); mo = Vg[:n].reshape(n, -1).mean(1)
@@ -18,7 +20,7 @@ hit = [f for f in range(n) if mr[f] > 150 and mo[f] < mr[f] - 40]
 print("白く光るのにうちが暗いコマ", hit)
 if not hit: sys.exit(0)
 def rd_range(p, s, e):
-    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", f"fps=2997/100,select='between(n\\,{s}\\,{e})',scale={W}:{H}", "-vsync", "0", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", p, "-vf", f"fps={G['FPS_FF']},select='between(n\\,{s}\\,{e})',scale={W}:{H}", "-vsync", "0", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
     fr = np.frombuffer(r.stdout, np.uint8).reshape(-1, H, W, 3); return {s + i: fr[i] for i in range(len(fr))}
 def colfit(img, refim):
     o = img.astype(np.float32).copy()
@@ -26,7 +28,7 @@ def colfit(img, refim):
         x, y = o[..., c].ravel()[::5], refim[..., c].astype(np.float32).ravel()[::5]
         k, b = np.polyfit(x, y, 1); o[..., c] = o[..., c] * k + b
     return np.clip(o, 0, 255).astype(np.uint8)
-g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (640, 360))
+g = lambda x: cv2.resize(cv2.cvtColor(x, cv2.COLOR_BGR2GRAY), (MW, MH))
 os.makedirs(f"{w}/proj/public/flash", exist_ok=True); os.makedirs(f"{w}/tmp", exist_ok=True)
 FJ = f"{w}/proj/src/flash.json"; fl = json.load(open(FJ)) if os.path.exists(FJ) else []
 if os.path.exists(FJ): shutil.copy(FJ, FJ + ".bak_auto")

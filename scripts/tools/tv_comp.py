@@ -7,13 +7,15 @@ python3 tv_comp.py <作業フォルダ>
 - 色：背景と画面の中を分けて、手本の色に2次の式で合わせる（場面ごと）
 - 出す物：cuts/<番号>.mp4・cuts/<番号>.json（_all.json にも足す）
 """
-import argparse, json, os, subprocess
+import argparse, json, os, subprocess, sys
 import cv2
 import numpy as np
 
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("--off", type=float, default=2876.7928 - 9.6)
 g = ap.parse_args()
-W, H, FPS = 1280, 720, 30000 / 1001
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from geo import geo
+_G = geo(g.w); W, H = _G["W"], _G["H"]  # 10/30 geo
+FPS, FPS_W = (30000 / 1001, "30000/1001") if abs(_G["FPS"] - 29.97) < 0.01 else (_G["FPS"], _G["FPS_FF"])  # 29.97 の手本は前のまま（30000/1001）
 E = {s["i"]: s for s in json.load(open(f"{g.w}/eye/out.json"))["shots"]}
 S = json.load(open(f"{g.w}/mg/tv/screens.json"))
 TR = {int(k): v for k, v in json.load(open(f"{g.w}/mg/tv/track.json")).items()}
@@ -104,13 +106,13 @@ for i in (29, 33, 37, 38, 42):
         inner = cv2.warpAffine(b, (Mf @ np.linalg.inv(M(mid)) @ Bm)[:2], (W, H), flags=cv2.INTER_LANCZOS4)
         outs.append((bg, inner, sm)); refs.append(cv2.imread(f"{g.w}/txt/f/{f + 1:05d}.jpg"))
     # 色：背景（画面の外・字幕の帯の外）と中を分けて合わせる
-    band = np.zeros((H, W), bool); band[300:400] = True
+    band = np.zeros((H, W), bool); band[round(300 * H / 720):round(400 * H / 720)] = True  # 字幕の帯（r2 の行を高さの比で）
     cb = fitc(np.concatenate([o[0][::4, ::4] for o in outs]), np.concatenate([r[::4, ::4] for r in refs]),
               np.concatenate([(~o[2] & ~band)[::4, ::4] for o in outs]))
     ci = fitc(np.concatenate([o[1][::4, ::4] for o in outs]), np.concatenate([r[::4, ::4] for r in refs]),
               np.concatenate([(cv2.erode(o[2].astype(np.uint8), np.ones((9, 9), np.uint8)) > 0)[::4, ::4] & ~band[::4, ::4] for o in outs]))
     os.makedirs(f"{g.w}/cuts", exist_ok=True)
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "30000/1001",
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_W,
                           "-i", "-", "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", f"{g.w}/cuts/{i}.mp4"], stdin=subprocess.PIPE)
     ss = []
     for (bg, inner, sm), r in zip(outs, refs):
@@ -119,7 +121,7 @@ for i in (29, 33, 37, 38, 42):
         soft = cv2.GaussianBlur(sm.astype(np.float32), (0, 0), 1.5)[..., None]
         fr = (a * (1 - soft) + b * soft).astype(np.uint8)
         p.stdin.write(fr.tobytes())
-        ga, gb = cv2.cvtColor(cv2.resize(fr, (480, 270)), cv2.COLOR_BGR2GRAY), cv2.cvtColor(cv2.resize(r, (480, 270)), cv2.COLOR_BGR2GRAY)
+        ga, gb = cv2.cvtColor(cv2.resize(fr, (480, round(480 * H / W))), cv2.COLOR_BGR2GRAY), cv2.cvtColor(cv2.resize(r, (480, round(480 * H / W))), cv2.COLOR_BGR2GRAY)
         ss.append(cv2.matchTemplate(ga, gb, cv2.TM_CCOEFF_NORMED)[0, 0])
     p.stdin.close(); p.wait()
     allr[str(i)] = {"track": 1, "model": "tv_comp", "ssim_color": None, "ncc": round(float(np.mean(ss)), 3), "frames": len(frames)}

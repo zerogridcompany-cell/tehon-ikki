@@ -4,17 +4,20 @@ python3 multi_photo.py <作業フォルダ> <カット番号> <写真…> [--out
 - その写真の所で、手本との近さが今のカットより上がる時だけ置く（前のカットの残りが映るコマは触らん）
 - 前の物は cuts/<番号>.mp4.bak_multi に控え
 """
-import argparse, json, os, shutil, subprocess
+import argparse, json, os, shutil, subprocess, sys
 import cv2
 import numpy as np
 
-W, H, FPS = 1280, 720, 29.97
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo, half
+W, H, FPS = 1280, 720, 29.97   # main で geo(<作業>) に替わる（10/30）
+FPS_FF = "2997/100"
 sift = cv2.SIFT_create(4000); bf = cv2.BFMatcher()
 
 
 def readv(p, ss=None, n=None):
     c = ["ffmpeg", "-v", "error"] + (["-ss", f"{ss:.4f}"] if ss is not None else []) + ["-i", p] + (["-frames:v", str(n)] if n else [])
-    r = subprocess.run(c + ["-vf", f"fps=2997/100,scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
+    r = subprocess.run(c + ["-vf", f"fps={FPS_FF},scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
     return np.frombuffer(r.stdout, np.uint8).reshape(-1, H, W, 3).copy()
 
 
@@ -32,6 +35,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("w"); ap.add_argument("i"); ap.add_argument("photos", nargs="+"); ap.add_argument("--out"); ap.add_argument("--hold", action="store_true", help="写真が置けんかったコマは、その写真を置けた一番近いコマの置き方で埋める（窓が出たり消えたりして余計な切り替えになるのを防ぐ）")
     g = ap.parse_args()
+    global W, H, FPS, FPS_FF
+    G = geo(g.w); W, H, FPS, FPS_FF = G["W"], G["H"], G["FPS"], G["FPS_FF"]
     shots = sorted(json.load(open(f"{g.w}/eye/out.json"))["shots"], key=lambda s: float(s["t0"]))
     j = [k for k, s in enumerate(shots) if str(s["i"]) == g.i][0]
     f0 = int(round(float(shots[j]["t0"]) * FPS)); f1 = int(round(float(shots[j + 1]["t0"]) * FPS)); n = f1 - f0
@@ -46,7 +51,7 @@ def main():
         im = cv2.imread(p); s = 900 / max(im.shape[:2]); sm = cv2.resize(im, None, fx=s, fy=s) if s < 1 else im; s = min(s, 1.0)
         k, d = sift.detectAndCompute(cv2.cvtColor(sm, cv2.COLOR_BGR2GRAY), None)
         P.append((p, im, s, k, d))
-    txt = np.ones((H, W), bool); txt[300:420] = False
+    txt = np.ones((H, W), bool); txt[round(300 * H / 720):round(420 * H / 720)] = False  # 字幕の帯（r2 の行を高さの比で）
     got = {p[0]: {} for p in P}  # 写真 → {コマ: (絵, 覆う所)}
     for t in range(n):
         r = R[t]; rg = cv2.cvtColor(r, cv2.COLOR_BGR2GRAY)
@@ -93,7 +98,7 @@ def main():
     if out == cp and os.path.exists(cp) and not os.path.exists(cp + ".bak_multi"):
         shutil.copy(cp, cp + ".bak_multi")
     tmp = out + ".tmp.mp4"
-    pr = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", "2997/100", "-i", "-",
+    pr = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", FPS_FF, "-i", "-",
                            "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", tmp], stdin=subprocess.PIPE)
     pr.stdin.write(O.tobytes()); pr.stdin.close(); pr.wait(); shutil.move(tmp, out)
     print("書いた", out)

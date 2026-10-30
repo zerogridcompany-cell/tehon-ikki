@@ -9,8 +9,11 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cut_score import frames, ssim
+import cut_score
+from geo import geo
 ap = argparse.ArgumentParser(); ap.add_argument("w"); ap.add_argument("out"); ap.add_argument("--max-ssim", type=float, default=0.6); ap.add_argument("--step", type=int, default=6); ap.add_argument("--dry", action="store_true")
 a = ap.parse_args(); w = os.path.abspath(a.w); T = os.path.dirname(os.path.abspath(__file__)); SK = os.path.dirname(os.path.dirname(T))
+cut_score.use_geo(w); GG = geo(w); FPS = GG["FPS"]  # 10/30 geo
 import glob
 ref = glob.glob(f"{w}/ref/*.mp4")[0]; R = frames(ref); V = frames(os.path.join(w, a.out)); n = min(len(R), len(V))
 shots = {str(s["i"]): s for s in json.load(open(f"{w}/eye/out.json"))["shots"]}
@@ -19,7 +22,7 @@ PEOPLE = re.compile(r"\b(man|woman|men|women|person|people|face|he|she|his|her|m
 jobs = []
 for l in open(f"{w}/eye/segs.txt"):
     if ":" not in l: continue
-    k, v = l.split(":"); k = k.strip(); s0, s1 = map(float, v.split("-")); f0, f1 = round(s0 * 29.97), min(n, round(s1 * 29.97))
+    k, v = l.split(":"); k = k.strip(); s0, s1 = map(float, v.split("-")); f0, f1 = round(s0 * FPS), min(n, round(s1 * FPS))
     if f1 - f0 < 1 or not os.path.exists(f"{w}/cuts/{k}.mp4"): continue
     m = float(np.mean([ssim(R[i], V[i]) for i in range(f0, f1)]))
     what = str(shots.get(k, {}).get("what", ""))
@@ -32,8 +35,8 @@ if a.dry or not jobs: sys.exit(0)
 tpl = open(f"{SK}/references/plate_task.md").read()
 def one(j):
     k, s, e, what = j; d = f"{w}/mg/auto/{k}_{s}"; os.makedirs(d, exist_ok=True); mid = (s + e - 1) // 2
-    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", ref, "-vf", f"fps=2997/100,select=eq(n\\,{mid})", "-vsync", "0", "-frames:v", "1", f"{d}/ref.png"])
-    open(f"{d}/task.md", "w").write(tpl.replace("__W__x__H__", "1280x720").replace("__DESC__", what or "見本のコマの中身").replace("__TONE__", "見本どおり"))
+    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", ref, "-vf", f"fps={GG['FPS_FF']},select=eq(n\\,{mid})", "-vsync", "0", "-frames:v", "1", f"{d}/ref.png"])
+    open(f"{d}/task.md", "w").write(tpl.replace("__W__x__H__", f"{GG['W']}x{GG['H']}").replace("__DESC__", what or "見本のコマの中身").replace("__TONE__", "見本どおり"))
     if not os.path.exists(f"{d}/plate.png"):
         subprocess.run(["codex", "exec", "--skip-git-repo-check", "-s", "workspace-write", "task.md を読んで、その通りに画像を1枚生成して plate.png に保存して。参照画像は ref.png。"], cwd=d, stdin=subprocess.DEVNULL, capture_output=True)
     return j, os.path.exists(f"{d}/plate.png")

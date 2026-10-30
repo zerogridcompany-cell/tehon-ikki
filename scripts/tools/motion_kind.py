@@ -12,8 +12,11 @@ python3 motion_kind.py <作業> <うちの書き出し.mp4> [--out shirabe/動�
 """
 import argparse, glob, json, os, sys
 import cv2, numpy as np
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from geo import geo
 
-W, H, FPS = 320, 180, 29.97
+W, H, FPS = 320, 180, 29.97   # __main__ で geo の SW・SH・FPS に替わる（10/30）
+FULLW = 1280                  # 手本の横の画素（G を手本の px に直す）
 L_REAL = 1.2  # 中の動き（0〜255 の平均の差）。圧縮の揺れは 0.3〜0.6
 
 
@@ -27,7 +30,11 @@ def frames(p, n=None):
     return np.array(out)
 
 
-MASK = np.ones((H, W), np.uint8); MASK[int(H * .416):int(H * .583)] = 0
+def _mask():
+    m = np.ones((H, W), np.uint8); m[int(H * .416):int(H * .583)] = 0; return m
+
+
+MASK = _mask()
 
 
 def pair(a, b):
@@ -44,7 +51,7 @@ def pair(a, b):
             if M is not None:
                 c = np.array([W / 2, H / 2]); mv = M[:, :2] @ c + M[:, 2] - c
                 s = float(np.hypot(M[0, 0], M[1, 0]))
-                G = float(np.hypot(*mv) + abs(s - 1) * W / 2) * (1280 / W)  # 1280 幅の px に直す
+                G = float(np.hypot(*mv) + abs(s - 1) * W / 2) * (FULLW / W)  # 手本の幅の px に直す（r2 は 1280）
                 wa = cv2.warpAffine(ab, M, (W, H), borderMode=cv2.BORDER_REFLECT)
                 vm = cv2.warpAffine(MASK, M, (W, H), flags=cv2.INTER_NEAREST)
                 m = (MASK > 0) & (vm > 0)
@@ -94,6 +101,7 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="shirabe/動き表.json"); ap.add_argument("--cuts", action="store_true")
     ap.add_argument("--ids", default=""); ap.add_argument("--try", dest="tryf", default="", help="--cuts の時、cuts/<番号>.mp4 の代わりに測るファイル（1カットだけ）")
     a = ap.parse_args(); w = os.path.abspath(a.w)
+    GG = geo(w); W, H, FPS, FULLW = GG["SW"], GG["SH"], GG["FPS"], GG["W"]; MASK = _mask()
     segs = []
     for l in open(f"{w}/eye/segs.txt"):
         if ":" in l:

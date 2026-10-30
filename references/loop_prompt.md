@@ -10,6 +10,13 @@
 3. スキルの SKILL.md（一本道の段と門）・references/waza.md（技と効いた数字）・references/otoshiana.md（落とし穴）
 4. 作業フォルダの 作り方.md・ミス帳.md・数値の照合.md・最新の check_<版>/mane_check.md（あれば）
 
+## 🔒 手本の数字は図鑑から読む（10/30 依頼者「一回見ただけで100パーセント理解できるように」→「つなぎもやって」）
+- 作業フォルダの **zukan/zukan.json**（段0 見る・`run.sh miru`）が手本の正。カット（コマぴったり・切り替えの種類）・合わせ先・カメラ・一枚絵か動画か・色・粒・鋭さ・網点・顔と主役・字（1語ずつ）・飾り・効果音・声・曲と拍の網は、**ここから読む。手本を自分で測り直さん**（差の検査＝mane_check・tehon-oracle は最後の門だけ）
+- 一覧＝zukan/設計図.md・目で見る＝zukan/一覧.html。弱い所（references/miru.md「取れんかった」）だけ目で確かめる
+- 道具は手本の大きさ・fps を `scripts/tools/geo.py`（geo(<作業>)・cut_frames(<作業>)）から読む。1280x720・29.97 を書かん（縦長・30fps の手本で全部ずれる）
+- 字幕の下書き＝proj/src/caps.json（init の zukan_proj.py が図鑑から書く）。絵の中の字（背番号・看板）は proj/src/e_no_moji.json＝字幕にせん
+- zukan.json が無い作業フォルダなら、最初に `run.sh miru <手本> <作業>` を打つ
+
 ## 手本ごとに 決め.md で切り替わる事
 - **実写の埋め方**：決め.md のとおり。例＝r2「元の映像を探すだけ（find_sources→hires→fit_all）・Kling は使わん」／51「本人が映らん実写は Codex の描き直し＋手本の動き」。本人が映る実写は描き直さん。決め.md に無ければ決めずに、その場面は今のまま置いて DONE に「決め.md に実写の埋め方が無い」と書く
 - **実写の元探し（段2a）は `/jissha-sagashi` の一本道で、係を自分で出す**（10/26 依頼者「r2 も自走に乗せる」）：①find_sources（題名）→ ②系統ごとに長尺を落として `scan_long.py --only <黒いカット>` → ③モンタージュは `perframe.py` → ④X（fxtwitter）・TikTok（yt-dlp 一覧）→ ⑤素材パック（scenepack）・同じ映像を使う他の edit。係は同時4体まで・指示の型＝`~/.claude/skills/jissha-sagashi/references/kakari_shiji_rei.md`。○は必ず並べた絵を目で見る（字幕の文字の偽○・同じ収録の別の秒は×）

@@ -9,6 +9,7 @@ import numpy as np
 from scipy.optimize import minimize
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from slab_cam_fit import ref_mask, render, dice
+import slab_cam_fit
 import cv2
 
 
@@ -29,6 +30,7 @@ def main():
     ap.add_argument("--dz", type=float, required=True); ap.add_argument("--dx", type=float, required=True)
     ap.add_argument("--fov", type=float, default=30); ap.add_argument("--out", required=True)
     a = ap.parse_args()
+    slab_cam_fit.use_geo(a.w)  # 10/30 geo
     ref = glob.glob(f"{a.w}/ref/*.mp4")[0]
     C = layout(json.load(open(f"{a.w}/proj/src/slabs.json")), a.dz, a.dx)
     prev = None; keys = []; tot = 0
