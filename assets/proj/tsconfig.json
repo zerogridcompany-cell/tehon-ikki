@@ -1,0 +1,1 @@
+{"compilerOptions":{"target":"ES2018","module":"esnext","moduleResolution":"bundler","jsx":"react-jsx","strict":true,"resolveJsonModule":true,"esModuleInterop":true,"skipLibCheck":true,"noEmit":true}}

@@ -1,0 +1,78 @@
+---
+name: tehon-ikki
+description: 他人の動画（手本）を1コマずつ写す「手本の写し」を、前の写し（51＝v112・r2＝v10）で見つけた技を最初から全部、効く順番でかけて、1回で高い質まで持っていく時に使う。「手本の写し」「この動画を写して」「1コマもずらさず作り直して」「一発で写して」「r2の続き」「51みたいに写して」「完コピ動画」。測る→作る→合わせる→見た目→切り替え→比べるの一本道と起動スクリプト（run.sh）・道具一式つき。記事の写しは kiji-mane、VSL の構成の写しは vsl-mane、見せる前の門は tehon-oracle。
+---
+
+# 手本の写し 一発（tehon-ikki）
+
+🔒 2026-10-25 依頼者「v1→v113 の工程をぶっ飛ばして、一気にワンステップで 113 ぐらいのクオリティまで持っていけないのか」。
+前の写しは「技を1つ見つける→書き出して測る」を約110回くり返した。見つけた技と落とし穴は全部 `references/waza.md`・`references/otoshiana.md` にある。**最初から全部を効く順番でかける**のがこのスキル。
+
+## 🔒 1回の命令で v0 からゴールまで（10/25 依頼者「1回のプロンプトで v112 まで」）
+`run.sh ikki <手本.mp4> <作業> <決め.md>` だけ。中身＝init → 係（claude opus）が下の一本道を全部やる → 1つずつ直して測るのをくり返す（references/loop_prompt.md）→ 見張り（scripts/ikki_loop.sh）が点を見て、3回伸びんかったら前と違うやり方で起こし直す → **ゴール＝「完全に同じ」＝手本を圧縮し直しただけの値（SSIM ≥0.997・カット ≥99.5%・余計 0・波 ≥0.999・ΔE ≤0.1・赤0）**で止まる（🔒10/26 依頼者「全部 51 より上・完全に同じになるまで繰り返す」。51 v112 の数字は途中の段）。経過＝<作業>/ikki_loop.log
+- 決め.md も聞かずに既定で書く（実写＝拾う→無ければ人が出ん所は生成・字の書体＝当て比べで決める）。本人が先に言うた事があればそれが上
+
+## 🔒 聞かずに最後まで（10/28 依頼者「俺とのやり取りは完全になしで、1回の命令で最後まで。できるだけ少ない回数で差分0」）
+- 命令は1回。元探し・生成（人が出ん所）・作る・測る・直す・音まで、**本人に聞かず・話しかけず**完成まで回す。完成の線＝上の「完全に同じ」
+- 書き出しは少なく：直す前に数字で差を出して計算→まとめて直して1回書き出す（版を思いつきで重ねん）
+- 元は**何が何でも拾う**（YouTube・X・TikTok・Bilibili・長い公式動画の丸ごと走査・画像検索・言い換え4言語）→無ければ人が出ん所は生成・人が出る所は似た別の実写か描き直し＋手本の動き（臨機応変）
+- 生成の費用は決め.md の予算の中なら聞かずに撃つ（予算が無い時は 1本 20cr・合計 200cr まで）。送信・公開・購入・広告ON は今まで通り本人の言葉の1回だけ（このスキルの仕事には入らん）
+- 音も手本の音は使わん：分ける（demucs）→ナレ＝近い既製の声で同じ文・同じ間／本人の声＝元の動画から拾う／効果音＝棚から一番近い音を同じ時刻に／BGM＝同じ曲を探す（無ければ近い曲）→手本と比べて直す（references/oto.md）
+
+
+## 🔒 作る前に構造を数字で（10/30 依頼者「動画が来たら構成を深く理解。この曲・このビートでこの切り替わり。1ミリも間違えん」「全部数字で」）
+- 段0.5（references/kouzou.md）が門を通るまで、作る段に入らん。秒数を写すんやなく**決まりを写す**（曲・拍・切り替わり・絵が何に合わせとるか）
+- 🔒 **絵は動画で**：動いとるカットに一枚絵を寄せて動画のふりをせん（依頼者「見てて苦しい」）。元の動画 → 無ければ動画で生成。still_check の🔴一枚絵は 0
+
+## 決め.md の中身（🔒10/28〜 聞かずに既定で書く・本人が言うた時だけ替える）
+1. **実写の埋め方**：①元の映像を探すだけ（本人が映る実写は必ずこれ＝`/jissha-sagashi` の段1〜5を全部回る）②本人が映らん実写は Codex の描き直し＋手本の動き（51 のやり方）③**人が出ん実写（ロケット・物・札）で元が見つからん物は生成AIで埋める**（`references/seisei_umeru.md`・手本から角度・動き・モーションブラーを測って指示文に・見積もり→「作って」）。r2＝①＋③（10/26 依頼者「人が出てない部分は Kling とかで生成」）
+2. **字幕・字の書体の候補**（Codex の目の答えを見せて）— 決まらんなら当て比べで決める
+決めた事は `<作業>/決め.md` に書く。
+
+## 一本道（この順・段の門を通ってから次へ）
+| 段 | やる事 | 命令 | 門（次へ行く条件） |
+|---|---|---|---|
+| 0 | 置き場・土台・カット分け | `run.sh init <手本.mp4> <作業>` | eye/segs.txt と一覧の絵ができた |
+| 0.5 | 🆕**構造の地図**（10/30）：曲を当てる（区間・版・速さ・位置）→ 拍の網 → 絵の出来事を1コマずつ → 何に合わせとるか（たまたまと比べて）→ 曲の切り替わりの数字 → 決まり.md | `run.sh kouzou <作業>`（中身＝references/kouzou.md） | `scripts/kouzou/check_kouzou.py` が OK（曲の穴0・根拠の弱い曲0・切り替わり全部・一枚絵🔴0） |
+| 1 | **目**：Codex にカットの中身（kind・誰・何・検索語・字・加工）を書かせる | `cd <作業>/eye && codex exec … task.md` | eye/out.json の shots がカット数とそろう |
+| 2a | **実写**：元探し（裏・数時間）→ 1080p → 当てる | find_sources.py → hires.py → fit_all.py（下の「実写」） | 🔴当たりは目で見る（r2 の3周目は「当たり」4つが全部外れ）。hires のしきい（目印25点）は下げん |
+| 2b | **作り手の絵**（MG・AI の絵）：Codex で描き直し | `run.sh plates <作業> mg/w1` | plate.png がそろう（拒否は代わりを作る） |
+| 2c | **字**：字幕（txt_events→txt_words→txt_build）・字や数字の表や札は Remotion のカード（references/waza.md「字」「カード」） | 道具は scripts/tools/txt_*.py | 字は1語ずつ手本のコマに置けた |
+| 2d | **動く MG**：中で動く MG（吹き出し・通知・砂嵐・降る物・しわ・描き順・広がる写真・連打・カメラの流れ）は部品で組む。止まった一枚絵で済まさん | `assets/proj/src/mg/README.md`（`src/mg.json` に並べる）・測る＝`scripts/tools/mg_measure.py` | 動く MG のカットが全部 mg.json に入り、各部品の値が測った表から来とる |
+| 3 | **合わせる**：一枚絵を手本の1コマずつに ECC（追う／真ん中で固定／初めの位置の良い方）・色の2次・ぼかし | `run.sh fit <作業>` | 「ECC 失敗」が出とらん・mode が全部 init になっとらん |
+| 3b | **動きの写し**：手本の動きの場（DIS フロー）で一枚絵を毎コマ曲げる（置くだけ／基準の絵を曲げる／隣の絵を曲げるの良い方） | `run.sh flow <作業>` | 「コマ平均 前→後」が出た（t181：0.781→0.840） |
+| 4 | **書き出し1回目** | `run.sh render <作業> v1` | mane_check が出た |
+| 5 | **見た目**（全部この順）：粒 → 場面ごとの色・明るさ・やわらかさ（1本で）→ 切り替えの強さ | `run.sh grain` → `run.sh look`（shot_look.json）→ 書き出し → 最後に `run.sh cut`（cuttune.json）| 🔴色を変えたら切り替えも変わる＝cut は最後 |
+| 6 | **書き出し2回目**＋残りの一覧 | `run.sh render <作業> v2` | 秒ごとの表で低い所を「残り」に出す |
+| 6b | 🆕**仕上げ**（10/27 r2・効いた順）：大きさ→サムネイル由来の元の動画→人が出ん所を Codex の絵→白く光るコマ（Flash）→色の当て直し→字幕（型合わせ・時刻・重なり）→ズームぼかし→切り替え | `run.sh finish <作業> <版>`（段ごとに size／thumbs／plates-low／flash／color／caps／zoomblur も打てる） | 字幕の重なり0・照合の門🔴0・字幕の帯の一覧を目で見た |
+| 6c | 🆕**差分0**（10/28 r2）：動き表→時刻の作り直し（retime）→大きさを画素で探す（size_scan）→MG に手本の動き（flow_tx --force）。書き出しはせん | `run.sh zero <作業> <前の版>`（中身＝references/sabun_zero.md） | 動き表の🔴0・size_scan が全カット 1.000/0/0・書き出しは最後に1回 |
+| 6d | 🆕**r2 後半の技**（10/28 夜・効いた順）：元の動画の当て直し（map_fit：手本のコマ→元の秒の表）→ コマごとの明るさと濃さ（frame_moment・上に層の無いカットだけ）→ 色だけ（chroma_cut）→ 粒（grain_cut・足す量 1.5 超えは模様＝足さん）→ 網点（ht_scan で探す→Remotion の層）→ 追跡の飾り（hud_measure→Hud.tsx）→ 字幕の光3段 | `scripts/tools/` の各道具（使い方と効いた数字＝references/waza.md「10/28 夜」） | 一枚絵🔴（still_check）・ぼかしすぎ🔴（sharp_check）・大きさ🔴（size_sift）が前の版より減った |
+| 8 | 🆕**音**（10/28 r2）：手本の音は使わず、ナレ＝同じ既製の声で録って1語ずつ合わせる／実在の人の声＝元の動画から拾う／BGM＝Shazam＋速さ×位置で同じ曲の同じ所／効果音＝棚から置いて近づく物だけ | `scripts/tools/oto/`（手順＝references/oto.md） | 音の近さ（oto_eval）が伸びんくなるまで・音量は手本の LUFS ±0.2 |
+| 7 | **見せる前**：tehon-oracle の門 → 上下の比べを Finder で（open -R） | — | 🔴0 |
+
+- 1回目（段4）の目安：r2 の作りなら SSIM 0.5 前後（実写が見つかった分しだい）。段5までで 51 の v70 前後の見た目の技が入る
+- **数字の見込みは式で出す**：全体 SSIM＝Σ(種類のコマ数×その平均)÷全コマ（r2 は式 0.537＝実測 0.541）。黒いままのコマが一番の差＝探しの当たり率で見込む（`references/waza.md`「見込み」）
+
+## 重さの守り（16GB の Mac を落とさん）
+- 重い作業の前に毎回 `run.sh guard`（スワップ 500MB 未満・メモリ空き 15% 未満・重い作業2本以上なら止まる）
+- 書き出しは `--concurrency=3`・`--gl=angle`。実写の探しは 1本ごと 10秒あけ（YT_SLEEP=10・YT_COOKIES=chrome）。mini と同時に YouTube を叩かん
+- 終わったら `~/bin/drive-offload --path <作業>/src`（落とした動画）
+
+## 実写（段2a）＝ `/jissha-sagashi`（10/26 別スキルに切り出した・r2 で 70/81 当てた道）
+- 順＝題名で当てる（find_sources）→ **長い公式動画を丸ごと走査**（scan_long）→ **モンタージュは1コマずつ当て**（perframe）→ X（syndication→fxtwitter→yt-dlp）→ TikTok（一覧・ハッシュタグ）→ hires（1080p・前後3秒）→ fit_all --only
+- 🔴 機械の○は手本の字幕の文字で水増しされる＝必ず並べた jpg を目で見る（msearch.py で字幕の帯を隠して当て直す）。弱い当たり（9〜24点）でも目で同じカメラなら採用
+- 🔴 fit_all は1本ずつ（2本同時で _all.json を上書きし合った）。係に投げる型＝jissha-sagashi/references/kakari_shiji_rei.md
+- **人が出ん実写で元が無い物**＝`references/seisei_umeru.md`（ref_look.py で手本を測る→指示文→見積もり→「作って」→撃つ→fit）
+- テレビの枠に入った対談など合成の場面は tv_comp2.py を型に（背景は Codex の絵・中の対談は「目印／覆う大きさ／2人並びの片方の枠」を相関で選ぶ）
+
+## 道具（scripts/）
+- 🆕10/27 r2（仕上げの段）：`tools/size_check.py`・`thumb_vid.py`・`plates_low.py`・`plate_into_cut.py`・`window_vid.py`・`flash_auto.py`（＋assets/proj/src/Flash.tsx・flash.json）・`look_pred.py`・`look_refit.py`・`cap_fit.py`・`cap_time.py`・`cap_ocr_diff.py`・`zoom_blur.py`・`blur_refit.py`。土台の Main.tsx は字幕を色・ぼかしの外へ・黒い字（caps の c）・普通の明朝（kind:plain）・薄い重ね（cuttune の mix）・`--props {"off":["caps"]}` に対応
+- 🆕10/26 r2：`tools/sub_photo.py`（モンタージュを写真1枚ずつ）・`img_pick.py`（候補の山から選ぶ）・`window_mask.py`（黒地の窓）・`panel_comp.py`（寄せ集めの枠）・`fit_cut.py --keepH`・`scan_long.py`（--only は種類を問わず）。使い方と効いた数字＝references/waza.md「10/26 夜」
+- `run.sh`（段ごと）・`eye_prep.py`（カット分け・一覧の絵）・`make_plates.py`（一枚絵の表・頼み書き）・`grain_need.py`（粒）
+- `tools/`：green_fit・fit_cut・fit_all・find_sources・hires・match・assemble・cut_tune・tv_comp2・txt_*・img_search/verify・photo_clips・mane_check（＋katachi）
+- `assets/proj/`：Remotion の土台（Main＝土台の動画→一枚絵→カード→字幕）。node_modules は mane の base へのリンク
+- 51 だけにある技の道具（字の型の当て・場面ごとの色・やわらかさ・面積の逆算など）＝`~/research/mane-20261021/air/items/51/tools/`（waza.md に場所）
+
+## 実例
+- r2（@attentioncompound イーロン・76秒）：v4 0.362 → v10 0.541（一枚絵48枚・テレビ・カード・粒）。~/research/tehon-me/r2/shirabe/進み.md
+- 51（@ascendculture・94秒）：v112 SSIM 0.694〜0.75・色 ΔE 0.9〜1.4・カット 99〜102/102・動き全部🟢。~/research/mane-20261021/air/items/51/作り方.md
