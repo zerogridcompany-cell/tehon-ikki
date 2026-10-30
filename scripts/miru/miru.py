@@ -81,16 +81,44 @@ if not done:
     gate = sorted({int(np.argmin(np.abs(T - float(x)))) for x in re.findall(r"pts_time:([\d.]+)", e)})
     src = {}
     for i in gate: src.setdefault(i, []).append("ffmpeg")
+    # 絵の中だけ（黒い地・枠を外す）で前後の形と色を比べる＝縦型の小窓の手本で「同じ人・同じ色の別カット」を拾う（10/30 mm4u：670・802・810・859 を見落としとった）
+    def box_pair(i, j):
+        a, b_ = G[i].astype(np.float32), G[j].astype(np.float32); mk_ = np.maximum(a, b_) > 25; ys, xs = np.where(mk_)
+        if len(ys) < 50: return 1.0, 0.0, 0.0
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        if mk_.mean() < 0.05: return 1.0, 0.0, 0.0   # 暗い地に字だけ（51 の 1421＝2.5%・1430＝4.5%・明るい所が 5% 未満）は絵の替わりにせん
+        A_ = cv2.resize(a[y0:y1, x0:x1], (40, 40)); B2 = cv2.resize(b_[y0:y1, x0:x1], (40, 40))
+        A_ = (A_ - A_.mean()) / (A_.std() + 1e-3); B2 = (B2 - B2.mean()) / (B2.std() + 1e-3)
+        h1 = cv2.calcHist([cv2.cvtColor(np.ascontiguousarray(F[i][y0:y1, x0:x1]), cv2.COLOR_BGR2HSV)], [0, 1], None, [16, 8], [0, 180, 0, 256])
+        h2 = cv2.calcHist([cv2.cvtColor(np.ascontiguousarray(F[j][y0:y1, x0:x1]), cv2.COLOR_BGR2HSV)], [0, 1], None, [16, 8], [0, 180, 0, 256])
+        return float((A_ * B2).mean()), float(cv2.compareHist(cv2.normalize(h1, h1), cv2.normalize(h2, h2), cv2.HISTCMP_BHATTACHARYYA)), float(np.abs(a - b_)[mk_].mean())
+    ccb = np.ones(N); hbb = np.zeros(N); db = np.zeros(N)
+    for i in range(1, N): ccb[i], hbb[i], db[i] = box_pair(i - 1, i)
+    def is_flash(i):   # 前と後の両方より明るい山（光るだけ）
+        lo_ = LUM[max(0, i - 6):max(1, i - 1)]; hi_ = LUM[min(N - 1, i + 2):min(N, i + 7)]
+        return len(lo_) and len(hi_) and LUM[i] - max(np.median(lo_), np.median(hi_)) > 30
+    for i in range(2, N - 2):
+        steady = ccb[i - 1] >= 0.75 and ccb[i + 1] >= 0.75
+        if steady and not is_flash(i) and db[i] > 35 and (ccb[i] < 0.45 or (hbb[i] > 0.45 and db[i] > 40)): src.setdefault(i, []).append("中身")   # 差 35 以下＝MG の中で動いとるだけ（51 の 141〜168・396・890）
+        # 1コマだけ挟まる替わり目（859：前→1コマ→後）
+        elif i + 2 < N and ccb[i - 1] >= 0.75 and ccb[i + 2] >= 0.75 and ccb[i] < 0.45 and db[i] > 35 and box_pair(i - 1, i + 1)[0] < 0.45 and not is_flash(i): src.setdefault(i, []).append("中身1コマ")
     for i in range(1, N):
         if s[i] > 0.3: src.setdefault(i, []).append("eye")
         if hb[i] > 0.35 and cc[i] < 0.7 and s[i] > 0.2: src.setdefault(i, []).append("入れ替わり")
+    # 同じ絵の中で光っただけ（320・494）は切れ目にせん。門（ffmpeg）の切れ目は消さん
+    NEWR = {"中身", "中身1コマ"}
+    for i in list(src):
+        if i not in gate and 2 <= i < N - 3 and is_flash(i) and box_pair(i - 2, i + 2)[0] >= 0.75: src.pop(i)
+    # 2コマ以内に並んだ切れ目は前の1つに（859・860）
+    for i in sorted(src):
+        if i in src and set(src[i]) <= NEWR and (any(j in src for j in (i - 1, i - 2)) or any(j in src and not set(src[j]) <= NEWR for j in (i + 1, i + 2))): src.pop(i)   # 新しい規則だけの切れ目が前からの切れ目の2コマ以内なら新しい方を外す（前からの切れ目は消さん）
     b = [0] + sorted(src) + [N]
     cuts = []
     for k in range(len(b) - 1):
         f0, f1 = b[k], b[k + 1]
         cuts.append(dict(i=k, f0=f0, f1=f1, n=f1 - f0, t0=round(ft(f0), 4), t1=round(ft(f1) if f1 < N else kihon["dur"], 4),
                          gate=f0 in gate, src=src.get(f0, ["頭"]), scene=round(float(s[f0]), 3), hist=round(float(hb[f0]), 3), corr=round(float(cc[f0]), 3)))
-    save(f"{CA}/cutfeat.json", dict(s=s.round(4).tolist(), m=m.round(2).tolist(), hb=hb.round(4).tolist(), cc=cc.round(3).tolist(), gate=gate))
+    save(f"{CA}/cutfeat.json", dict(s=s.round(4).tolist(), m=m.round(2).tolist(), hb=hb.round(4).tolist(), cc=cc.round(3).tolist(), ccb=ccb.round(3).tolist(), hbb=hbb.round(3).tolist(), db=db.round(1).tolist(), gate=gate))
     save(f"{P}/cuts.json", cuts)
 log("カット", len(cuts), "（門の ffmpeg と同じ物", sum(c["gate"] for c in cuts), "）")
 CF = json.load(open(f"{CA}/cutfeat.json"))
@@ -215,7 +243,11 @@ if not done:
         ratio_ = max((x[0] if x[0] >= 1 else 1 / max(x[0], 1e-3)) for x in rat)
         prev = UG.get(c["i"] - 1, {}).get("kamera", {}); sc = prev.get("s", [])[-3:]
         zth = float(np.prod(sc)) if sc else 1.0
-        if ratio_ >= 2.5:
+        # 振りは「切れ目のコマだけ」流れとる時だけ（縦長の小窓は線の向きがいつも偏る＝mm4u で 20 中 15 が whip になっとった）
+        nb_ = [grad_ratio(G[x]) for x in list(range(max(0, f - 6), max(0, f - 2))) + list(range(min(N, f + 3), min(N, f + 7)))]
+        base_r = float(np.median([(x[0] if x[0] >= 1 else 1 / max(x[0], 1e-3)) for x in nb_])) if nb_ else 1.0
+        why["flow_base"] = round(base_r, 2)
+        if ratio_ >= 2.5 and ratio_ >= 1.8 * base_r:
             r.update(kind="whip", flow_ratio=round(ratio_, 2), dir="横" if any(x[0] >= 2.5 for x in rat) else "縦", **why)
         elif zth >= 1.15 or zth <= 0.87:
             r.update(kind="zoom-through", zoom_last3=round(zth, 3), **why)

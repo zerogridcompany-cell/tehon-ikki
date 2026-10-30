@@ -138,6 +138,16 @@ for x in secs:
         x["key"] = hits[0].get("key")
     else:
         x["fumei"] = True; x["konkyo"] = dict(shazam=0, madoi=sum(1 for w0 in win if x["a"] <= w0 + 4 < x["b"]), note="Shazam が黙った＝曲は不明（kouzou の bgm_fp で元の曲から探す）")
+# 同じ曲・同じ速さ（skew の差 2% 未満）の隣どうしは1つに（10/30 mm4u：Flashing Lights 1曲を 161/112/92/136/89 の5つに割っとった＝速さの揺れは曲の中の揺れ）
+mg_ = []
+for x in secs:
+    p_ = mg_[-1] if mg_ else None
+    if p_ and not x.get("fumei") and not p_.get("fumei") and x["name"] == p_["name"] and abs((x.get("skew") or 0) - (p_.get("skew") or 0)) < 0.02:
+        p_["b"] = x["b"]; p_["konkyo"]["shazam"] += x["konkyo"]["shazam"]; p_["konkyo"]["madoi"] += x["konkyo"]["madoi"]
+        p_.setdefault("matome", []).append(dict(a=x["a"], tempo_local=x["tempo_local"], at0=x.get("at0")))
+    else: mg_.append(x)
+secs = mg_
+for x in secs:
     # 拍の網（区間の音楽の層だけ）
     a0, b0 = int(x["a"] * SR), int(x["b"] * SR); y = mus[a0:b0]
     if len(y) > SR * 2:
