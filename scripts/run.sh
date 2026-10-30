@@ -1,5 +1,6 @@
 #!/bin/bash
 # tehon-ikki：手本の写し。`run.sh ikki` 1回で v0 からゴール（51 v112 の数字）まで自動。段ごとに手で打つ事もできる（SKILL.md の順）。
+#   run.sh miru <手本.mp4> <作業>          … 🆕段0 見る：手本を1回だけ見て全部を数字に（<作業>/zukan/zukan.json・設計図.md・一覧.html）→ 門 check_zukan
 #   run.sh init <手本.mp4> <作業フォルダ>   … 置き場・Remotion の土台・カット分け（eye_prep）
 #   run.sh plates <作業> <波 例 mg/w1>      … 一枚絵の表と頼み書き（make_plates）→ 裏で Codex（3本ずつ）
 #   run.sh fit <作業>                        … 全部の波の一枚絵を手本に当てる（green_fit・ECC）→ proj/src/green.json
@@ -32,6 +33,10 @@ guard(){
   echo "重い作業 ${heavy} 本"; if [ "$heavy" -ge 2 ]; then echo "🔴 重い作業は同時2本まで（agent-harness 鉄則5）"; return 1; fi
 }
 case "$1" in
+  miru)  REF="$2"; W="$3"; mkdir -p "$W"; guard || exit 1
+         # 🔒 手本は1回だけ見る。作る段は zukan.json の数字だけを使う・測り直さん（差の検査は最後の門だけ）
+         $PY "$HERE/miru/miru.py" "$REF" "$W" ${@:4} 2>&1 | grep -vE "Warn|^I0000|^W0000|^INFO|non monotonically"
+         $PY "$HERE/miru/check_zukan.py" "$W" ;;
   kouzou) W="$2"; KZ="$HERE/kouzou"; mkdir -p "$W/kouzou"; REF=$(ls "$W"/ref/*.mp4 | head -1)
          [ -f "$W/kouzou/picture.json" ] || $PY "$KZ/e_picture.py" "$REF" "$W/kouzou/picture.json"
          [ -f "$W/kouzou/kyoku.json" ] && $PY "$KZ/kouzou.py" "$W" 2>/dev/null | grep "■\|→" 
@@ -156,5 +161,5 @@ P
     cd "$W"; SP=$(ls ref/ORACLE_SPEC_*.json 2>/dev/null | head -1)
     if [ -n "$SP" ]; then python3 ~/.claude/skills/tehon-oracle/scripts/oracle.py check "$SP" "${V}c.mp4"; else python3 ~/.claude/skills/tehon-oracle/scripts/oracle.py diff ref/*.mp4 "${V}c.mp4"; fi
     echo "仕上げ済み：${V}c（比べ＝${V}c_比べ.mp4・check_${V}c）" ;;
-  *) sed -n 2,22p "$0" ;;
+  *) sed -n 2,23p "$0" ;;
 esac
