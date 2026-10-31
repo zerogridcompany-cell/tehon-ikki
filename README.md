@@ -31,6 +31,7 @@ Claude Code で「この動画を写して」「手本の写し」と言うと�
 4. `references/waza.md`：効いた技と数字
 5. `references/otoshiana.md`：踏んだ落とし穴
 6. `references/oto.md`・`references/sabun_zero.md`：音の写しと差分0の手順
+7. `references/ban.md`：板（スライド）が切り替わる編集を CapCut で組んで写す（`run.sh ban`）＝字体当て・CapCut の字の大きさと位置・1コマずつのフェード・図の素材・重ねの門
 
 ## 必要な物
 - Python 3（opencv・numpy・scipy・librosa・scikit-image）
@@ -38,6 +39,7 @@ Claude Code で「この動画を写して」「手本の写し」と言うと�
 - Node と Remotion 4（書き出しの土台は `assets/proj`。`npm install` してから使う）
 - Codex CLI（カットの中身を書く「目」と、一枚絵の描き直し）
 - ElevenLabs の鍵（音の段だけ。`~/.elevenlabs_key` に置く）
+- 板の写し（`run.sh ban`）だけ：macOS（Vision の字の読み取り・swiftc）・CapCut デスクトップ版・fontTools・Pillow
 
 ## 注意
 - 書体ファイル（`assets/proj/public/fonts`）は入れていません。各自で用意してください。

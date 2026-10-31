@@ -42,6 +42,13 @@ case "$1" in
          [ -f "$W/kouzou/kyoku.json" ] && $PY "$KZ/kouzou.py" "$W" 2>/dev/null | grep "■\|→" 
          $PY "$KZ/check_kouzou.py" "$W" ;;
   guard) guard ;;
+  ban)   S="$2"; B="$3"; BAN="$HERE/ban"   # 板の写し（CapCut）：run.sh ban <states|kawaru|zu|fade|spec|all|draft|gate <mp4>|hosei> <作業>/ban（references/ban.md）
+         case "$S" in
+           all)  for x in states kawaru zu fade spec; do $PY "$BAN/ban_$x.py" "$B" || exit 1; done ;;
+           gate) $PY "$BAN/ban_gate.py" "$B" "$4" 2>&1 | grep -v Warn ;;
+           draft) python3 "$BAN/make_draft_spec.py" "$B" ;;
+           *)    $PY "$BAN/ban_$S.py" "$B" ${@:4} ;;
+         esac ;;
   ikki)
     REF="$2"; W="$3"; K="$4"
     [ -d "$W/proj" ] || bash "$0" init "$REF" "$W"
