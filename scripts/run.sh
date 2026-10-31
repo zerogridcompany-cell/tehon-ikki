@@ -37,6 +37,7 @@ case "$1" in
          # 🔒 手本は1回だけ見る。作る段は zukan.json の数字だけを使う・測り直さん（差の検査は最後の門だけ）
          $PY "$HERE/miru/miru.py" "$REF" "$W" ${@:4} 2>&1 | grep -vE "Warn|^I0000|^W0000|^INFO|non monotonically"
          $PY "$HERE/miru/zukan_plus.py" "$W" 2>&1 | grep -v Warn   # 板の切り替え・図が動くコマ・音は絵の何ms後・フェードの曲がり・字体（assets/fonts_tana に自分で字体を置く）・変わる字
+         { $PY "$HERE/miru/kyoku_plus.py" "$W" 2>&1 | grep "曲の決め直し"; } || echo "🟡 曲の決め直しは飛ばした"   # 曲は Shazam の作者の他の曲も指紋で比べ直す・不明の区間は隣の曲の続きか・声は曲の声か語りか（yt-dlp が要る）
          $PY "$HERE/miru/check_zukan.py" "$W" ;;
   meshiken) $PY "$HERE/miru/me_shiken.py" "$2/zukan/zukan.json" "$3" "$2/zukan/me_shiken.json" ;;   # 目の試験：詰め切った答え（seikai.json）と照らして最初に見えた割合
   kouzou) W="$2"; KZ="$HERE/kouzou"; mkdir -p "$W/kouzou"; REF=$(ls "$W"/ref/*.mp4 | head -1)
