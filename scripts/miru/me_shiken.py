@@ -1,6 +1,6 @@
 # 目の試験：1回目に見た物（zukan.json）を、何周も詰めて分かった答え（seikai.json）と照らして「最初に見えた割合」を出す
 # 使い方：python3 me_shiken.py <zukan.json> <seikai.json> [結果.json]
-#   答えの作り方＝写しを詰め切った作業から（手本R＝~/research/zerogrid-edit2-20261031/me_shiken/seikai.json）。道具を直すたびに測り直して点を上げる
+#   答えの作り方＝写しを詰め切った作業から（例＝作業フォルダの me_shiken/seikai.json）。道具を直すたびに測り直して点を上げる
 import json, re, sys
 import numpy as np
 Z = json.load(open(sys.argv[1])); S = json.load(open(sys.argv[2])); rows = []
