@@ -26,5 +26,5 @@ for k, vid in todo[:a.max]:
     dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", out], capture_output=True, text=True).stdout.strip() or 0)
     f0, f1 = segs[k]; t = 0.0
     while t < dur:
-        r = subprocess.run(["/usr/bin/python3", f"{T}/vid_patch.py", w, k, out, f"{t:.1f}", f"{min(dur, t + 65):.1f}", "--frames", f"{f0}-{f1 - 1}"], capture_output=True, text=True)
+        r = subprocess.run([sys.executable, f"{T}/vid_patch.py", w, k, out, f"{t:.1f}", f"{min(dur, t + 65):.1f}", "--frames", f"{f0}-{f1 - 1}"], capture_output=True, text=True)
         print(k, vid, f"{t:.0f}s", r.stdout.count("入れた"), "コマ入れた"); t += 60

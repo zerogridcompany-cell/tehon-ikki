@@ -9,6 +9,7 @@
 2. 作業フォルダの 直し.md（あれば・下に貼ってある）＝この手本の作業指示。一番下の「再開◯回目」から読む
 3. スキルの SKILL.md（一本道の段と門）・references/waza.md（技と効いた数字）・references/otoshiana.md（落とし穴）
 4. 作業フォルダの 作り方.md・ミス帳.md・数値の照合.md・最新の check_<版>/mane_check.md（あれば）
+5. 🆕11/02 **この Mac で使える道具**＝最初に1回 `bash <スキル>/scripts/run.sh doctor` を打つ。🟡 の道具（Codex・ElevenLabs・CapCut・字の読み取り など）は使わず、その段を飛ばして `作業フォルダ/skipped.log` に「飛ばした段・理由」を1行書く。🔴 があれば直す方法を作り方.md に書いて止まる。飛ばした段のせいで止まらん（出せる所まで出す）
 
 ## 🔒 手本の数字は図鑑から読む（10/30 依頼者「一回見ただけで100パーセント理解できるように」→「つなぎもやって」）
 - 作業フォルダの **zukan/zukan.json**（段0 見る・`run.sh miru`）が手本の正。カット（コマぴったり・切り替えの種類）・合わせ先・カメラ・一枚絵か動画か・色・粒・鋭さ・網点・顔と主役・字（1語ずつ）・飾り・効果音・声・曲と拍の網は、**ここから読む。手本を自分で測り直さん**（差の検査＝mane_check・tehon-oracle は最後の門だけ）
@@ -82,10 +83,10 @@ SKILL.md の段 0〜6 を順に全部やってから「1回の回し方」に入
 
 ## 決まり
 - **字幕・画面の字・数字・UI の字は全部 Remotion で描く**（motion-cm の決まり）。PIL・ffmpeg の drawtext で焼かん
-- 絵は Codex で描き直す（`codex exec --skip-git-repo-check -s workspace-write "…"`・`--full-auto` と `-i` は付けん）。手本のコマは下敷きにだけ使う。画素を貼らん
+- 絵は Codex で描き直す（設定 TI_CODEX が off なら描き直しは飛ばして skipped.log へ）（`codex exec --skip-git-repo-check -s workspace-write "…"`・`--full-auto` と `-i` は付けん）。手本のコマは下敷きにだけ使う。画素を貼らん
 - 手本の音は比べるために敷いてええ（社内の練習用・外に出さん）
 - 重さの守り：重い作業の前に `run.sh guard`。ffmpeg は `-threads 2`・`-nostdin`、重い python は `nice -n 10`。待ち合わせに `pgrep -f` を使わん
 - 消してええのは自分の作業フォルダの中だけ。古い mp4 は最新と1つ前だけ残す。tmp の remotion-webpack-bundle-* は自分の分を消す
-- 落とした動画は区切りで `~/bin/drive-offload --path <作業>/src`
+- 落とした動画は区切りで、置き場の道具があれば移す（作者の Mac は `~/bin/drive-offload --path <作業>/src`・無ければ飛ばす）
 - 手本・ほかの作業フォルダ（51・r2 など）は読むだけ。書かん
-- 調べ物は ~/.claude/rules/search-until-found.md の手順（言葉を作り手の名前に直す→手元→YouTube・Web・GitHub・X）。最大15回で「いったん」止めて、探した言葉と場所を作り方.md に書く
+- 調べ物は（~/.claude/rules/search-until-found.md があればその）手順（言葉を作り手の名前に直す→手元→YouTube・Web・GitHub・X）。最大15回で「いったん」止めて、探した言葉と場所を作り方.md に書く

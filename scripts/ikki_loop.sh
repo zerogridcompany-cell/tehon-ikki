@@ -20,11 +20,12 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"; SK="$(cd "$HERE/.." && pwd)"
 export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH
+. "$HERE/config.sh"   # 🆕11/02 人ごとの設定（TI_PY・TI_CLAUDE・TI_LOOP_MODEL など）
 MAX_RESTART=${MAX_RESTART:-20}; NO_GAIN=${NO_GAIN:-3}
 
 # --- 点数とゴール ---------------------------------------------------------
 # 出力は1行：「点 ゴール(1/0) 内訳」
-score(){ /usr/bin/python3 - "$1" <<'PY'
+score(){ "$TI_PY" - "$1" <<'PY'
 import json,glob,re,sys,os
 a=sys.argv[1]
 if os.path.isfile(a):
@@ -92,7 +93,7 @@ while true; do
     until net_ok; do log "ネットに届かん（api.anthropic.com）＝数えずに待つ"; sleep 120; done
     k=$((k+1)); log "係を起こす（$k/$MAX_RESTART 回目）"
     n0=$(wc -c < "$W/run.log" 2>/dev/null || echo 0)
-    (cd "$W" && nice -n 5 claude --model "$(cat "$W/model.txt" 2>/dev/null || echo opus)" -p "$(prompt "$W")" --dangerously-skip-permissions --output-format stream-json --verbose >> "$W/run.log" 2>&1)
+    (cd "$W" && nice -n 5 "$TI_CLAUDE" --model "$(cat "$W/model.txt" 2>/dev/null || echo "$TI_LOOP_MODEL")" -p "$(prompt "$W")" --dangerously-skip-permissions --output-format stream-json --verbose >> "$W/run.log" 2>&1)
     # 係がすぐ落ちて、落ちた理由がネット（ENOTFOUND・Can't reach the API server・ECONNRESET・ETIMEDOUT）なら、その回は数えん
     if tail -c +$((n0+1)) "$W/run.log" | grep -qE "ENOTFOUND|Can't reach the API server|ECONNRESET|ETIMEDOUT|EAI_AGAIN" && ! [ -f "$W/DONE" ]; then
       k=$((k-1)); log "係がネットの理由で落ちた＝回数に数えん（$k/$MAX_RESTART）"; sleep 120; continue
@@ -105,7 +106,7 @@ while true; do
   read a ga why < <(score "$W"); r=$((r+1))
   head -1 "$W/DONE" | grep -q "ゴール到達" && log "🟡 係はゴール到達と書いたが数字が届いとらん＝頭打ちとして扱う（${why}）"
   mv "$W/DONE" "$W/DONE_回$r"
-  if /usr/bin/python3 -c "import sys;sys.exit(0 if float('$a')>float('$b')+0.01 else 1)"; then zero=0; else zero=$((zero+1)); fi
+  if "$TI_PY" -c "import sys;sys.exit(0 if float('$a')>float('$b')+0.01 else 1)"; then zero=0; else zero=$((zero+1)); fi
   log "回$r 終わり 点 ${b}→${a}（伸びなし連続 ${zero}）$why"
   [ $zero -ge $NO_GAIN ] && end REST "$NO_GAIN 回続けて点が伸びず＝休み"
   printf '\n## 再開%s回目（%s・前の回の点 %s→%s）\n- 前の回は頭打ちで止まった。DONE_回%s と 作り方.md の頭打ちの表を読み、loop_prompt.md の「頭打ちで止まったら」の 1〜3 で、前と違うやり方に変える\n- 今の数字：%s\n' \

@@ -1,6 +1,6 @@
 # 1語ずつ合わせる：手本の語の時刻（Forced Alignment）と、録った1本の語の時刻をそろえて伸び縮み
 import json, os, subprocess, numpy as np, librosa, soundfile as sf, pyrubberband as rb
-K=open(os.path.expanduser('~/.elevenlabs_key')).read().strip(); SR=44100
+K=open(os.path.expanduser(os.environ.get('TI_ELEVENLABS_KEY_FILE','~/.elevenlabs_key'))).read().strip(); SR=44100
 FA=[w for w in json.load(open('narr/fa.json'))['words'] if w['text'].strip()]
 L=json.load(open('narr/lines.json')); B=json.load(open('narr/best.json'))
 REAL=json.load(open("narr/real.json")); elon_n=sum(len(x["text"].split()) for x in REAL)

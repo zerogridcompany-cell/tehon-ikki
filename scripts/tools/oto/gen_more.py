@@ -1,7 +1,7 @@
 # 弱い行だけ、速さ×安定度を振って録り足し、手本の行（正確な時刻）に一番近い1本へ入れ替える
 import json, os, sys, math, urllib.request
 sys.path.insert(0,'tools'); from line_cmp import cmp
-K=open(os.path.expanduser('~/.elevenlabs_key')).read().strip(); V=open('narr/voice.txt').read().strip()
+K=open(os.path.expanduser(os.environ.get('TI_ELEVENLABS_KEY_FILE','~/.elevenlabs_key'))).read().strip(); V=open('narr/voice.txt').read().strip()
 L=json.load(open('narr/lines.json')); B=json.load(open('narr/best.json'))
 def sc(c): pc=c['pitch_corr'] if c['pitch_corr']==c['pitch_corr'] else 0; return c['sim']+0.5*pc-2*abs(math.log(c['ratio']))
 for i in [int(x) for x in sys.argv[1].split(',')]:

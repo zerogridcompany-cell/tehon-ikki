@@ -24,6 +24,15 @@ git clone https://github.com/zerogridcompany-cell/tehon-ikki.git ~/.claude/skill
 ```
 Claude Code で「この動画を写して」「手本の写し」と言うと呼ばれます。
 
+## 自分の Mac に合わせる（最初に1回）
+```bash
+mkdir -p ~/.config/tehon-ikki && cp tehon-ikki.config.example ~/.config/tehon-ikki/config   # 場所・鍵・Codex・CapCut を自分の物に書き換える（書かん物は既定）
+bash scripts/run.sh doctor                                 # 使える物・足りん物と入れ方の一覧
+```
+- 🔴 が出た物は入れないと出力が出ません（Python の部品・ffmpeg・Node・Claude Code）
+- 🟡 の物（Codex・ElevenLabs・CapCut・字の読み取り など）は無くても回ります。その段は飛ばして `<作業>/skipped.log` に残し、出せる所まで出します
+- Remotion は、`TI_NODE_MODULES` を書かなければ作業フォルダで自動で `npm install` します
+
 ## 読む順
 1. `SKILL.md`：全体の一本道と各段の門
 2. `references/miru.md`：段0 見る（手本を1回見て全部を数字に）

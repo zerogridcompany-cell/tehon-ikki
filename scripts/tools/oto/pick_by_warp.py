@@ -1,6 +1,6 @@
 # 行ごとに、候補の全部を「1語ずつ合わせた後」に手本の声と比べて一番の1本を選ぶ（本当の物差しで選ぶ）
 import json, os, glob, subprocess, sys, numpy as np, librosa, pyrubberband as rb
-K=open(os.path.expanduser('~/.elevenlabs_key')).read().strip(); SR=44100; sr=22050
+K=open(os.path.expanduser(os.environ.get('TI_ELEVENLABS_KEY_FILE','~/.elevenlabs_key'))).read().strip(); SR=44100; sr=22050
 FA=[w for w in json.load(open('narr/fa.json'))['words'] if w['text'].strip()]
 L=json.load(open('narr/lines.json')); B=json.load(open('narr/best.json'))
 V,_=librosa.load('sep/htdemucs/ref/vocals.wav',sr=sr)

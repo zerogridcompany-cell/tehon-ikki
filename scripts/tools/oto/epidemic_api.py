@@ -1,7 +1,7 @@
 # Epidemic Sound（ログイン済みの Claude 用 Dia）の /json/search/sfx/ を言葉ごと・全ページたたいて、試聴 mp3 のアドレスと名前を集める
 import json, os, sys, urllib.parse
 from playwright.sync_api import sync_playwright
-OUT=os.path.expanduser('~/research/tehon-me/r2/oto/sfx/corpus/E2'); os.makedirs(OUT,exist_ok=True)
+OUT=os.path.expanduser(os.environ.get('TI_SFX_CORPUS', os.path.join(os.environ.get('TI_WORK_ROOT','~/tehon-ikki-work'),'oto/sfx/corpus/E2'))); os.makedirs(OUT,exist_ok=True)
 MAN=OUT+'/_list.json'; man=json.load(open(MAN)) if os.path.exists(MAN) else {}
 terms=sys.argv[1].split(','); MAXP=int(sys.argv[2]) if len(sys.argv)>2 else 20
 with sync_playwright() as p:

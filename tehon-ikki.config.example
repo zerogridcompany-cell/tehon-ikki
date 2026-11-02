@@ -1,0 +1,30 @@
+# tehon-ikki の人ごとの設定。これを写して tehon-ikki.config（スキルの直下）か ~/.config/tehon-ikki/config に置く。
+# 書いてない物は既定のまま。確かめる＝ bash scripts/run.sh doctor
+
+# numpy・opencv が入っとる Python（空なら自動で探す）
+#TI_PY=/usr/bin/python3
+
+# Remotion の node_modules を使い回すなら場所を書く（空なら作業フォルダの proj で npm install）
+#TI_NODE_MODULES=$HOME/remotion-base/node_modules
+
+# ElevenLabs の鍵のファイル（音の段だけ。無ければ音の生成は飛ばす）
+#TI_ELEVENLABS_KEY_FILE=$HOME/.elevenlabs_key
+
+# Codex CLI（カットの目・一枚絵）。使わんなら off
+#TI_CODEX=codex
+
+# 回し役の Claude Code と、そのモデル
+#TI_CLAUDE=claude
+#TI_LOOP_MODEL=opus
+
+# 字を読む道具（空なら同梱の ocr-words を組んで使う・macOS だけ）
+#TI_OCR=
+
+# 板の写しを CapCut で組むか（on/off）
+#TI_CAPCUT=off
+
+# 効果音の棚（: 区切り）
+#TI_SFX_DIRS=$HOME/sfx:$HOME/Music/sfx
+
+# 作業の置き場の既定
+#TI_WORK_ROOT=$HOME/tehon-ikki-work

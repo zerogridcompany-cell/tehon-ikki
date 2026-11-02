@@ -11,6 +11,7 @@
 #   run.sh ikki <手本.mp4> <作業> [決め.md]  … 🔒1回の命令で最後まで：init→決め.md を置く→ikki_loop.sh を裏で（係が段0〜7→1つずつ直す→ゴール到達か頭打ちまで）
 #   run.sh loop <作業>                       … 回し続けるだけ（ikki_loop.sh・記録＝<作業>/ikki_loop.log）
 #   run.sh guard                             … メモリとスワップを見る（重い作業の前に毎回）
+#   run.sh doctor                            … 🆕この Mac で使える物・足りん物と入れ方の一覧（最初に1回・設定を変えたら）
 #   ── 仕上げ（10/27 r2 で効いた順・どの段も「点が上がった物だけ入れる・前は .bak」）──
 #   run.sh size <作業> <版>      … 大きさと位置のずれ（size_check）→ ずれたカットを cut_warp で重ね直す
 #   run.sh thumbs <作業>         … 素材が YouTube のサムネイルのカットを、元の動画を落として当てる（thumb_vid）
@@ -21,12 +22,13 @@
 #   run.sh zoomblur <作業>       … 手本の放射状のズームぼかしを足す（zoom_blur・全カット）
 #   run.sh finish <作業> <版>    … 🔒上を全部この順で：size→thumbs→plates-low→書き出しa→flash→color→caps→zoomblur→書き出しb→cut→書き出しc→照合の門
 set -e
-PY=/usr/bin/python3  # 🔴 homebrew の python3 には numpy・cv2 が無い（Air）＝道具は全部これで回す（10/25 t51ikki）
 HERE="$(cd "$(dirname "$0")" && pwd)"; T="$HERE/tools"; SK="$(cd "$HERE/.." && pwd)"
-NODE_MODULES=~/research/mane-20261021/air/base/node_modules
+# 🆕11/02 人ごとの設定（tehon-ikki.config・~/.config/tehon-ikki/config）＝場所・鍵・Codex・CapCut。確かめる＝ run.sh doctor
+. "$HERE/config.sh"
+PY="$TI_PY"; NODE_MODULES="$TI_NODE_MODULES"
 guard(){
-  local free=$(sysctl -n vm.swapusage | sed -E 's/.*free = ([0-9.]+)M.*/\1/')
-  local pct=$(memory_pressure | awk -F': ' '/free percentage/{gsub("%","",$2);print $2}')
+  local free=$(sysctl -n vm.swapusage 2>/dev/null | sed -E 's/.*free = ([0-9.]+)M.*/\1/'); free=${free:-9999}
+  local pct=$(memory_pressure 2>/dev/null | awk -F': ' '/free percentage/{gsub("%","",$2);print $2}')
   echo "見張り：スワップの残り ${free}MB・メモリの空き ${pct}%"
   if [ "${free%.*}" -lt 500 ] || [ "${pct:-100}" -lt 15 ]; then echo "🔴 重い作業を止める（スワップ 500MB 未満かメモリ 15% 未満）"; return 1; fi
   local heavy=$(ps -Ao args= | grep -E "^[^ ]*([Pp]ython|node)[^ ]* " | grep -cE "remotion render|find_sources.py|green_fit.py|fit_all.py|tv_comp|hires.py")
@@ -45,6 +47,7 @@ case "$1" in
          [ -f "$W/kouzou/kyoku.json" ] && $PY "$KZ/kouzou.py" "$W" 2>/dev/null | grep "■\|→" 
          $PY "$KZ/check_kouzou.py" "$W" ;;
   guard) guard ;;
+  doctor) bash "$HERE/doctor.sh" ;;
   ban)   S="$2"; B="$3"; BAN="$HERE/ban"   # 板の写し（CapCut）：run.sh ban <states|kawaru|zu|fade|spec|all|draft|gate <mp4>|hosei> <作業>/ban（references/ban.md）
          case "$S" in
            all)  for x in states kawaru zu fade spec; do $PY "$BAN/ban_$x.py" "$B" || exit 1; done ;;
@@ -64,16 +67,23 @@ case "$1" in
   init)
     REF="$2"; W="$3"; mkdir -p "$W/ref" "$W/cuts" "$W/src" "$W/shirabe"
     cp -n "$REF" "$W/ref/"
-    [ -d "$W/proj" ] || { cp -R "$SK/assets/proj" "$W/proj"; ln -s "$NODE_MODULES" "$W/proj/node_modules"; }
+    if [ ! -d "$W/proj" ]; then cp -R "$SK/assets/proj" "$W/proj"
+      # 🔴11/02 前は作者の Mac の場所に決め打ちでつないどった＝他の人の Mac では Remotion が無くて何も出んかった
+      if [ -n "$NODE_MODULES" ] && [ -d "$NODE_MODULES/remotion" ]; then ln -s "$NODE_MODULES" "$W/proj/node_modules"
+      else echo "Remotion を入れる（初回だけ・数分）"; (cd "$W/proj" && npm install --no-audit --no-fund) || { echo "🔴 npm install が通らん＝run.sh doctor を見る"; exit 1; }; fi
+    fi
     # 🔒10/30 つなぎ：段0 の図鑑が無ければ先に作る（手本は1回だけ見る）→ カット分け・cfg・字幕の下書きは図鑑から
     [ -f "$W/zukan/zukan.json" ] || bash "$0" miru "$W/ref/$(basename "$REF")" "$W" || { echo "🔴 段0 見る が門を通らん＝作る段に入らん"; exit 1; }
     $PY "$HERE/eye_prep.py" "$W"
     cp "$W/cfg.json" "$W/proj/src/cfg.json"
     $PY "$HERE/zukan_proj.py" "$W"
-    echo "次：Codex に eye/task.md を渡して eye/out.json を作らせる（cd $W/eye && codex exec --skip-git-repo-check -s workspace-write \"task.md を読んでその通りに out.json を作って\"）"
+    if [ "$TI_CODEX" = off ]; then TI_SKIP_LOG="$W/skipped.log" ti_skip "カットの目（eye/out.json）" "Codex が off"
+    else echo "次：Codex に eye/task.md を渡して eye/out.json を作らせる（cd $W/eye && $TI_CODEX exec --skip-git-repo-check -s workspace-write \"task.md を読んでその通りに out.json を作って\"）"; fi
     ;;
   plates)
-    W="$2"; WV="$3"; $PY "$HERE/make_plates.py" "$W" "$WV" ${@:4}
+    W="$2"; WV="$3"
+    [ "$TI_CODEX" = off ] && { TI_SKIP_LOG="$W/skipped.log" ti_skip "一枚絵 $WV" "Codex が off"; exit 0; }
+    $PY "$HERE/make_plates.py" "$W" "$WV" ${@:4}
     (bash "$W/$WV/run_codex.sh" > "$W/$WV/run_codex.log" 2>&1 &) ; echo "裏で Codex：$W/$WV/run_codex.log に ALLDONE"
     ;;
   fit)

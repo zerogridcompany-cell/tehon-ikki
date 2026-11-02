@@ -1,6 +1,7 @@
 #!/bin/bash
 # Epidemic の効果音をカテゴリの束ごとに：一覧→落とす→指紋→引き算→音は消す（空きを守る）。結果は sfx/fp_cat/<束>.json
-cd ~/research/tehon-me/r2/oto; mkdir -p sfx/fp_cat
+cd "${TI_OTO_DIR:-$HOME/research/tehon-me/r2/oto}";  # 🆕11/02 自分の作業の oto フォルダを TI_OTO_DIR で
+ mkdir -p sfx/fp_cat
 BUNDLES=(
 "designed,user-interface,scifi,swooshes,beeps,computers"
 "electricity,communications,musical,cartoon,games,lasers,robots"
