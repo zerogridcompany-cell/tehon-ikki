@@ -66,7 +66,7 @@ case "$1" in
   loop) nohup bash "$HERE/ikki_loop.sh" "$2" > "$2/ikki_loop.out" 2>&1 & echo "回し始めた：$2/ikki_loop.log" ;;
   init)
     REF="$2"; W="$3"; mkdir -p "$W/ref" "$W/cuts" "$W/src" "$W/shirabe"
-    cp -n "$REF" "$W/ref/"
+    cp -n "$REF" "$W/ref/" 2>/dev/null || true   # 🔒11/2 BSD の cp -n は「もうある」で 1 を返す＝set -e で init が黙って死んどった（作業の中に ref がある時）
     if [ ! -d "$W/proj" ]; then cp -R "$SK/assets/proj" "$W/proj"
       # 🔴11/02 前は作者の Mac の場所に決め打ちでつないどった＝他の人の Mac では Remotion が無くて何も出んかった
       if [ -n "$NODE_MODULES" ] && [ -d "$NODE_MODULES/remotion" ]; then ln -s "$NODE_MODULES" "$W/proj/node_modules"

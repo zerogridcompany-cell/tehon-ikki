@@ -38,7 +38,8 @@ T = np.array([x['t'] for x in tachiagari(y, 44100, band=(30, 150))]); av = []
 #   止め絵だけの手本（MG・手本R）＝板の切り替えで測る（MG は板の動き1つ1つに音が付く。板 83 で 22.5＝答え 22.9）
 CUTS = [c['f0'] for c in Z.get('cuts', []) if c.get('kirikae', {}).get('kind') not in (None, '頭')]
 honmono = sum(1 for c in Z.get('cuts', []) if c.get('seishi', {}).get('kind') == '本物の動画')
-EV, de = (CUTS, 'カット（本物の動画の場面がある手本）') if honmono >= 1 and len(CUTS) >= 3 else (BF, '板の切り替え（止め絵だけの手本＝MG）')
+#   🔒11/2（2回目）：「1つでも本物の動画」やと MG の板1枚の見間違いで切り替わる（手本R v7：11 カット中 1 が本物の動画と出て ms 22.5→34.7）→ カットの 1/4 以上が本物の動画の時だけ（手本S 10/13・mm4u 23/24・r2 125/213・手本J 27/68・51 41/134＝31%）
+EV, de = (CUTS, 'カット（本物の動画の場面が 1/4 以上の手本）') if len(CUTS) >= 3 and honmono >= 0.25 * len(CUTS) else (BF, '板の切り替え（止め絵が主の手本＝MG）')
 for f in EV:
     if not len(T): break
     t = f / FPS; j = np.argmin(abs(T - t)); dt = (T[j] - t) * 1000

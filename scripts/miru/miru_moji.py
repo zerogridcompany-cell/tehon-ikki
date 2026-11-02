@@ -56,11 +56,18 @@ for f in sorted(obs):
         for t in active:
             if f - t["last"] > 3 * A.step: continue
             io = iou(t["b"], o["b"]); sim = difflib.SequenceMatcher(None, norm(t["w"]), norm(o["w"])).ratio()
-            if (io > 0.4 and sim >= 0.5) or io > 0.75:
-                sc = io + sim
+            # 🔒11/2 手本X（字 68%・位置 42%）：カメラで寄る UI の字は箱が動いて IoU が落ち、同じ語が 4〜5 本の列に割れた（Podcasts 10-14／20-41／49-60／61-62）
+            #   → 動きを許す：①前の2つの観測から次の箱を予測した IoU ②中心のずれが字の高さの 1.5倍以内・大きさ 0.7〜1.4倍・字が 0.6 以上似とる
+            pb = t.get("pb"); iop = iou(pb, o["b"]) if pb else 0.0
+            h_ = max(1, t["b"][3] - t["b"][1]); cx, cy = (t["b"][0] + t["b"][2]) / 2, (t["b"][1] + t["b"][3]) / 2; ox, oy = (o["b"][0] + o["b"][2]) / 2, (o["b"][1] + o["b"][3]) / 2
+            ratio = (o["b"][3] - o["b"][1]) / h_
+            near = ((cx - ox) ** 2 + (cy - oy) ** 2) ** 0.5 <= 1.5 * h_ and 0.7 <= ratio <= 1.4 and sim >= 0.6
+            if (io > 0.4 and sim >= 0.5) or io > 0.75 or (iop > 0.4 and sim >= 0.5) or near:
+                sc = max(io, iop) + sim
                 if best is None or sc > best[0]: best = (sc, t)
         if best:
-            t = best[1]; t["seen"].append((f, o)); t["last"] = f; t["b"] = o["b"]
+            t = best[1]; pb_ = [2 * b1 - b0 for b0, b1 in zip(t["b"], o["b"])] if f - t["last"] <= A.step else None   # 次の箱の予測＝今の箱＋（今−前）
+            t["seen"].append((f, o)); t["last"] = f; t["b"] = o["b"]; t["pb"] = pb_
         else:
             t = dict(seen=[(f, o)], last=f, b=o["b"], w=o["w"]); tracks.append(t); active.append(t)
     active = [t for t in active if f - t["last"] <= 3 * A.step]

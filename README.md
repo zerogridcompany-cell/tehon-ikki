@@ -54,3 +54,7 @@ bash scripts/run.sh doctor                                 # 使える物・足�
 - 書体ファイル（`assets/proj/public/fonts`）は入れていません。各自で用意してください。
 - 文中の `~/research/...` は作った時の作業フォルダです。自分の場所に読み替えてください。
 - 写した動画を公開する時は、元の動画の権利を確かめてください。
+
+
+## skills/mg-mane（11/2 新設）
+手本のモーショングラフィックス広告（UI が動く・字の打ち込み・ロゴ）を構成ごと写す入口。tehon-ikki の道具を呼ぶだけ。`skills/mg-mane/scripts/mg_mane.sh miru|kime|ikki|ken|kurabe|hakaru`。実例（手本X・12.6秒）＝SSIM 0.94・切り替え 5/5・効果音 Epidemic のみ・-17.4 LUFS。決まりと流れ＝skills/mg-mane/SKILL.md

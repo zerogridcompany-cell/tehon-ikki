@@ -105,8 +105,17 @@ if not done:
     for i in range(1, N):
         if s[i] > 0.3: src.setdefault(i, []).append("eye")
         if hb[i] > 0.35 and cc[i] < 0.7 and s[i] > 0.2: src.setdefault(i, []).append("入れ替わり")
+    # 🔒11/2 手本X（暗い MG・初見でカット 0/5）：暗い地で板ごと替わる切り替え。scene・中身（db>35）・入れ替わり（s>0.2）は全部「絶対の明るさ」のしきい＝平均の明るさ 15〜25 の手本では山が出ん
+    #   → 明るい画素（>60）が前のコマと重ならん（消えた割合か現れた割合が 0.8 超・明るい画素が画面の 0.3% 以上）のに、動きを許した相関（前の真ん中 60% を今の中で探す）が 0.5 未満＝板替え。速い流れ（70〜75）は相関 0.95・打ち込みの字（244）は重なる、で外れる
+    MB = G > 60; inter_ = (MB[1:] & MB[:-1]).sum((1, 2)); gone_ = np.r_[0, 1 - inter_ / np.maximum(1, MB[:-1].sum((1, 2)))]; appe_ = np.r_[0, 1 - inter_ / np.maximum(1, MB[1:].sum((1, 2)))]; area_ = MB.mean((1, 2))
+    def shiftcorr(i):
+        a, b_ = G[i - 1].astype(np.float32), G[i].astype(np.float32); h, w = a.shape; y0, x0 = int(h * 0.2), int(w * 0.2); tpl = a[y0:h - y0, x0:w - x0]
+        if tpl.std() < 1 or b_.std() < 1: return 0.0
+        return float(cv2.matchTemplate(b_, tpl, cv2.TM_CCOEFF_NORMED).max())
+    for i in range(1, N):
+        if i not in src and (gone_[i] > 0.8 or appe_[i] > 0.8) and max(area_[i - 1], area_[i]) >= 0.003 and shiftcorr(i) < 0.5: src.setdefault(i, []).append("板替え")
     # 同じ絵の中で光っただけ（320・494）は切れ目にせん。門（ffmpeg）の切れ目は消さん
-    NEWR = {"中身", "中身1コマ"}
+    NEWR = {"中身", "中身1コマ", "板替え"}
     for i in list(src):
         if i not in gate and 2 <= i < N - 3 and is_flash(i) and box_pair(i - 2, i + 2)[0] >= 0.75: src.pop(i)
     # 2コマ以内に並んだ切れ目は前の1つに（859・860）
