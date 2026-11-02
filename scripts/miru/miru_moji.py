@@ -87,23 +87,36 @@ def refine(t):
     tpl = line_img(pk_f)[1][y0:y1, x0:x1]
     if tpl.size < 20 or tpl.std() < 1: return None
     lo, hi = max(0, min(fs) - 2 * A.step - 4), min(N - 1, max(fs) + 2 * A.step + 4)
-    fr = list(range(lo, hi + 1)); sc = []
+    fr = list(range(lo, hi + 1)); sc = []; en = []; thr = 0.75 * float(np.percentile(tpl, 90))   # 「はっきり白い」線の画素＝型の濃い所の 3/4 以上
     for f in fr:
         s_ = line_img(f)[1]; wx0, wy0 = max(0, x0 - 6), max(0, y0 - 6); win = s_[wy0:y1 + 6, wx0:x1 + 6]
-        if win.shape[0] < tpl.shape[0] or win.shape[1] < tpl.shape[1]: sc.append(0.0); continue
-        sc.append(float(cv2.matchTemplate(win, tpl, cv2.TM_CCOEFF_NORMED).max()))
-    sc = np.array(sc); on = sc > 0.6 * sc.max(); pk = fr.index(pk_f)
-    i0 = pk
-    while i0 > 0 and (on[i0 - 1] or (i0 > 1 and on[i0 - 2]) or (i0 > 2 and on[i0 - 3])): i0 -= 1
-    i1 = pk
-    while i1 < len(fr) - 1 and (on[i1 + 1] or (i1 < len(fr) - 2 and on[i1 + 2]) or (i1 < len(fr) - 3 and on[i1 + 3])): i1 += 1
-    while not on[i0] and i0 < pk: i0 += 1
-    while not on[i1] and i1 > pk: i1 -= 1
-    f0_, f1_ = fr[i0], fr[i1]
+        if win.shape[0] < tpl.shape[0] or win.shape[1] < tpl.shape[1]: sc.append(0.0); en.append(0.0); continue
+        sc.append(float(cv2.matchTemplate(win, tpl, cv2.TM_CCOEFF_NORMED).max())); en.append(float((win >= thr).sum()))   # en＝はっきり白い画素の数（薄く出とる途中は少ない）
+    sc = np.array(sc); en = np.array(en); pk = fr.index(pk_f)
+    # 🔒11/2 手本S（初見 字の出る・消える 1/14）：相関は明るさの倍率に強い＝薄く出始めた・消えかけのコマまで「出とる」と見て、出るが 4コマ早く・消えるが 5コマ遅かった（12本全部）
+    #   → 「はっきり白い画素の数が、落ち着いた量の半分以上」のコマだけ出とる（答えの作り方「白い画素が落ち着いた量の半分以上」と同じ物差し。線の量の平均やと薄い途中を数えてまだ 2コマ早かった）
+    # 🔒11/2（2回目）：出る・消えるは2つの物差しで出す。f0/f1＝「見え始め〜見え終わり」（相関 60%・前と同じ。r2・51・手本J の答えはこれ）／f0_koi/f1_koi＝「はっきり見える」（はっきり白い画素の数が落ち着いた量の半分以上。手本S の答え・人が「出た」と見る所）
+    #   はっきりの方だけにすると、字が小さく出て大きくなる・縁取りの字（r2 の buy 48→58・51 の句が 1〜3コマ遅れ）で見え始めを落とす＝両方を持ち、採点はどちらかが ±1 で当たり
+    def hani(on, force=False):
+        on = on.copy()
+        if force: on[pk] = True
+        i0 = pk
+        while i0 > 0 and (on[i0 - 1] or (i0 > 1 and on[i0 - 2]) or (i0 > 2 and on[i0 - 3])): i0 -= 1
+        i1 = pk
+        while i1 < len(fr) - 1 and (on[i1 + 1] or (i1 < len(fr) - 2 and on[i1 + 2]) or (i1 < len(fr) - 3 and on[i1 + 3])): i1 += 1
+        while not on[i0] and i0 < pk: i0 += 1
+        while not on[i1] and i1 > pk: i1 -= 1
+        return i0, i1
+    on0 = sc > 0.6 * sc.max(); i0, i1 = hani(on0); f0_, f1_ = fr[i0], fr[i1]
     seen0, seen1 = min(fs), max(fs)   # Vision が読めたコマは「出とる」証拠＝型合わせの範囲はそれより内に縮めん
     if seen0 < f0_: f0_ = seen0
     if seen1 > f1_: f1_ = seen1
-    return dict(f0=f0_, f1=f1_, peak=pk_f, ocr_box=pk_o["b"], w=pk_o["w"], score=round(float(sc.max()), 3),
+    solid = sc > 0.8 * sc.max(); plat = float(np.median(en[solid])) if solid.any() else float(en.max())
+    k0, k1 = hani(on0 & (en >= 0.5 * plat), force=True); f0k, f1k = fr[k0], fr[k1]
+    if seen0 < f0k and en[fr.index(seen0)] >= 0.5 * plat: f0k = seen0
+    if seen1 > f1k and en[fr.index(seen1)] >= 0.5 * plat: f1k = seen1
+    f0k, f1k = max(f0k, f0_), min(f1k, f1_)
+    return dict(f0=f0_, f1=f1_, f0_koi=f0k, f1_koi=f1k, mieta0=seen0, mieta1=seen1, peak=pk_f, ocr_box=pk_o["b"], w=pk_o["w"], score=round(float(sc.max()), 3),
                 edge=(i0 == 0, i1 == len(fr) - 1), sc=sc)
 
 
@@ -167,9 +180,25 @@ for t in tracks:
     stl = style(r["peak"], r["ocr_box"]) or {}
     ib = stl.get("ink_box") or [int(v * K) for v in r["ocr_box"]]
     words.append(dict(w=r["w"], f0=int(r["f0"]), f1=int(r["f1"]), t0=round(float(T[r["f0"]]), 4), t1=round(float(T[min(N - 1, r["f1"])]), 4),
+                      f0_koi=int(r["f0_koi"]), f1_koi=int(r["f1_koi"]), t0_koi=round(float(T[r["f0_koi"]]), 4), t1_koi=round(float(T[min(N - 1, r["f1_koi"])]), 4),
+                      mieta0=int(r["mieta0"]), mieta1=int(r["mieta1"]),
                       box_px=ib, box_pct=[round(100 * ib[0] / WW, 2), round(100 * ib[1] / HH, 2), round(100 * (ib[2] - ib[0]) / WW, 2), round(100 * (ib[3] - ib[1]) / HH, 2)],
                       moji_takasa_pct=round(100 * (ib[3] - ib[1]) / HH, 2), ocr_box_px=[int(v * K) for v in r["ocr_box"]],
                       score=r["score"], kenshutsu=len(t["seen"]), **{k: v for k, v in stl.items() if k != "ink_box"}))
+# 🔒11/2 手本S：同じ字が同じ場所で続いとるのに、Vision の読みが揺れる（もし365日→もし、5日）・数コマ読み落とすと列が切れ、題 138〜1641 が 131-388／382-1076／1068-1168／1154-1646 の4本になった
+#   → 同じ字（0.8 以上似とる）・同じ箱（IoU≥0.5）で、コマが重なる（か1コマ以内で続く）列は1本につなぐ。間が空いた物はつながん（手本J の点滅＝消えてまた出るは別の列のまま）
+words.sort(key=lambda x: (x["f0"], x["box_px"][1], x["box_px"][0])); stitched = []
+for x in words:
+    m = next((y for y in reversed(stitched) if x["f0"] <= y["f1"] + 1 and x["mieta0"] - y["mieta1"] <= 12 and iou(y["box_px"], x["box_px"]) >= 0.5
+              and difflib.SequenceMatcher(None, norm(y["w"]), norm(x["w"])).ratio() >= 0.8), None)   # Vision が読めたコマも 12コマ（0.4秒）以内で続く物だけ＝次の板の同じ語（r2）はつながん
+    if m is None: stitched.append(x); continue
+    f0_, f1_ = min(m["f0"], x["f0"]), max(m["f1"], x["f1"]); k0_, k1_ = min(m["f0_koi"], x["f0_koi"]), max(m["f1_koi"], x["f1_koi"])
+    s0_, s1_ = min(m["mieta0"], x["mieta0"]), max(m["mieta1"], x["mieta1"]); n_ = m["kenshutsu"] + x["kenshutsu"]; k_ = m.get("tsunagi", 0) + 1
+    if x["kenshutsu"] > m["kenshutsu"]: stitched[stitched.index(m)] = m = x   # 見えたコマが多い方の字・箱・見た目を残す
+    m["f0"], m["f1"], m["f0_koi"], m["f1_koi"], m["mieta0"], m["mieta1"], m["kenshutsu"], m["tsunagi"] = f0_, f1_, k0_, k1_, s0_, s1_, n_, k_
+    m["t0"], m["t1"] = round(float(T[f0_]), 4), round(float(T[min(N - 1, f1_)]), 4)
+    m["t0_koi"], m["t1_koi"] = round(float(T[k0_]), 4), round(float(T[min(N - 1, k1_)]), 4)
+words = stitched
 words.sort(key=lambda x: (x["f0"], x["box_px"][1], x["box_px"][0]))
 for i, x in enumerate(words): x["i"] = i
 json.dump(dict(step=A.step, read_w=OW, n_frames_read=len(range(0, N, A.step)), words=words,

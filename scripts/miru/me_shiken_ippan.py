@@ -120,6 +120,9 @@ def saiten(Z, S, add, NASHI):
     if S.get('moji'):
         W = Z.get('moji', {}).get('words', []); HH = S.get('H') or Z['meta'].get('H'); unit = S.get('moji_unit', 'word')
         fnd = d0 = d1 = bx = hk = 0; fo = []; miss = []
+        # 🔒11/2：出る・消えるの物差しは答えの作り方で2つある＝「見え始め・見え終わり」（f0/f1・r2/51/手本J の答え＝cap_time の相関）と「はっきり見える」（f0_koi/f1_koi・手本S の答え＝白い画素が落ち着いた量の半分以上）。見る段は両方を出し、どちらかが ±1 なら当たり
+        q0 = lambda w: min(abs(w['f0'] - m['f0']), abs(w.get('f0_koi', w['f0']) - m['f0']))
+        q1 = lambda w: min(abs(w['f1'] - m['f1']), abs(w.get('f1_koi', w['f1']) - m['f1']))
         for m in S['moji']:
             if unit == 'shot_words':
                 ws = [w for w in W if w['f1'] >= m['f0'] - 3 and w['f0'] <= m['f1'] + 3 and difflib.SequenceMatcher(None, nm(w['w']), nm(m['w'])).ratio() >= 0.75]
@@ -128,15 +131,15 @@ def saiten(Z, S, add, NASHI):
                 ws = [w for w in W if w['f1'] >= m['f0'] - 3 and w['f0'] <= m['f1'] + 3 and b[0] - 30 <= (w['box_px'][0] + w['box_px'][2]) / 2 <= b[2] + 30 and b[1] - 30 <= (w['box_px'][1] + w['box_px'][3]) / 2 <= b[3] + 30
                       and any(difflib.SequenceMatcher(None, nm(w['w']), k).ratio() >= 0.6 for k in toks)]
             else:
-                ws = [w for w in W if abs(w['f0'] - m['f0']) <= 6 and difflib.SequenceMatcher(None, nm(w['w']), nm(m['w'])).ratio() >= 0.8]
-                if ws: ws = [min(ws, key=lambda w: abs(w['f0'] - m['f0']))]
+                ws = [w for w in W if q0(w) <= 6 and difflib.SequenceMatcher(None, nm(w['w']), nm(m['w'])).ratio() >= 0.8]
+                if ws: ws = [min(ws, key=q0)]
             if not ws: miss.append(m['w']); continue
             fnd += 1
             if unit != 'shot_words':
                 if unit == 'phrase':   # 句は語の集まり＝前の句から残る語（to feel → to grow の to）があるので「句の頭／終わりに出る・消える語が1つでもあるか」
-                    d0 += min(abs(w['f0'] - m['f0']) for w in ws) <= 1; d1 += min(abs(w['f1'] - m['f1']) for w in ws) <= 1
+                    d0 += min(q0(w) for w in ws) <= 1; d1 += min(q1(w) for w in ws) <= 1
                 else:
-                    z0 = min(w['f0'] for w in ws); z1 = max(w['f1'] for w in ws); d0 += abs(z0 - m['f0']) <= 1; d1 += abs(z1 - m['f1']) <= 1
+                    d0 += min(q0(w) for w in ws) <= 1; d1 += min(q1(w) for w in ws) <= 1
             if m.get('box'):
                 ub = [min(w['box_px'][0] for w in ws), min(w['box_px'][1] for w in ws), max(w['box_px'][2] for w in ws), max(w['box_px'][3] for w in ws)]
                 hb = m['box'][3] - m['box'][1]; bx += iou(ub, m['box']) >= 0.5; hk += abs((ub[3] - ub[1]) - hb) <= max(0.02 * HH, 0.1 * hb)   # 高さの差＝画面の 2% か字の高さの 10% の大きい方まで

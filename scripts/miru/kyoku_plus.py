@@ -126,6 +126,32 @@ for s in secs:
             q = best[1]; s['name'] = q['name']; s.pop('fumei', None); s['cand_id'] = q['cand_id']; s['at0_fp'] = round(float(best[2]), 3); s.setdefault('konkyo', {})['mel_tsuzuki'] = round(best[0], 3)
             log.append(f'{s["a"]}-{s["b"]}秒：不明 → {q["name"]}（隣の曲の続き・メルの相関 {best[0]:.2f}）')
         else: log.append(f'{s["a"]}-{s["b"]}秒：不明のまま（指紋 一番 {meta[top[2]]["title"][:30]} {top[0]}・要る {need:.0f}・隣の続きの相関 {best[0]:.2f}）')
+# 🔒11/2 手本S（初見 曲 0%）：名前の無い隣どうし（Shazam が全部黙った・作者の候補も無い）は「別の曲という証拠」が無い限り1本
+#   手本S＝オリジナル曲1本を、拍の速さの揺れで 7つの「不明」に割っとった（速さの揺れは曲の中の揺れ＝10/30 mm4u と同じ）
+#   証拠＝①境目に無音の切れ目（音楽の層が境目 ±0.5秒で、まわり ±8秒の中央値より 30dB 以上落ちる）②音の高さの並び（chroma の相関 0.85 未満）
+#   🟡 弱み：同じ系統の別の曲が切れ目なしに重なって替わる物（r2 の phonk どうし＝chroma 0.98・音色 0.98）は耳では分けられん＝名前が要る（Shazam の聞き直し・音源の名前）
+if os.path.exists(mus) and sum(1 for s in secs if s.get('name') in (None, '不明')) >= 2:
+    srm = 22050; ym_, _ = librosa.load(mus, sr=srm)
+    rms_ = librosa.feature.rms(y=ym_, hop_length=512)[0]; tr_ = librosa.times_like(rms_, sr=srm, hop_length=512)
+    def chroma_(a, b):
+        seg = ym_[int(a * srm):int(b * srm)]
+        if len(seg) < srm: return None
+        c = librosa.feature.chroma_cqt(y=seg, sr=srm).mean(1); return c / (np.linalg.norm(c) + 1e-9)
+    mg0 = []
+    for s in secs:
+        p_ = mg0[-1] if mg0 else None
+        if p_ and p_.get('name') in (None, '不明') and s.get('name') in (None, '不明'):
+            t = s['a']; side = float(np.median(rms_[(tr_ > t - 8) & (tr_ < t + 8)])) + 1e-9; tani = float(rms_[(tr_ > t - 0.5) & (tr_ < t + 0.5)].min())
+            tani_db = 20 * np.log10(tani / side + 1e-9)
+            cL, cR = chroma_(max(0, t - 8), t - 0.3), chroma_(t + 0.3, t + 8); ch = float(cL @ cR) if cL is not None and cR is not None else 1.0
+            if tani_db > -30 and ch >= 0.85:
+                p_['b'] = s['b']; p_.setdefault('matome', []).append(dict(a=s['a'], bpm=s.get('bpm'), riyuu=f'不明どうし・切れ目なし（谷 {tani_db:.1f}dB・chroma {ch:.2f}）'))
+                p_['beats'] = p_.get('beats', []) + s.get('beats', []); p_['bars'] = p_.get('bars', []) + s.get('bars', [])
+                p_.setdefault('konkyo', {})['madoi'] = p_.get('konkyo', {}).get('madoi', 0) + s.get('konkyo', {}).get('madoi', 0)
+                log.append(f'{s["a"]}-{s["b"]}秒：不明どうし → 前に続ける（谷 {tani_db:.1f}dB・chroma {ch:.2f}）'); continue
+            log.append(f'{s["a"]}-{s["b"]}秒：不明どうしやが切れ目あり（谷 {tani_db:.1f}dB・chroma {ch:.2f}）＝分けたまま')
+        mg0.append(s)
+    secs = mg0
 # 隣の同じ名前はまとめる
 mg = []
 for s in secs:

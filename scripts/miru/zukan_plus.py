@@ -33,11 +33,17 @@ Z['ugoku_koma'] = [int(k + 1) for k in np.where(d > 0.15)[0] if (k + 1) not in n
 from oto_ms import tachiagari
 y = np.frombuffer(subprocess.run(['ffmpeg', '-v', 'error', '-i', REF, '-ac', '1', '-ar', '44100', '-f', 'f32le', '-'], capture_output=True).stdout, np.float32)
 T = np.array([x['t'] for x in tachiagari(y, 44100, band=(30, 150))]); av = []
-for f in BF:
+# 🔒11/2 手本S（初見 ms 10%）：どの「絵の変わり目」で測るかを手本の種類で決める
+#   本物の動画の場面がある手本（実写・3D）＝カット（hard/dissolve）で測る。板の切り替え（ban）には字の出入り・ハエ・題の動きが混ざり、音の無い変わり目まで数えて 12.9ms（答え 31.0）になった。カット 12 本なら 36.2ms
+#   止め絵だけの手本（MG・手本R）＝板の切り替えで測る（MG は板の動き1つ1つに音が付く。板 83 で 22.5＝答え 22.9）
+CUTS = [c['f0'] for c in Z.get('cuts', []) if c.get('kirikae', {}).get('kind') not in (None, '頭')]
+honmono = sum(1 for c in Z.get('cuts', []) if c.get('seishi', {}).get('kind') == '本物の動画')
+EV, de = (CUTS, 'カット（本物の動画の場面がある手本）') if honmono >= 1 and len(CUTS) >= 3 else (BF, '板の切り替え（止め絵だけの手本＝MG）')
+for f in EV:
     if not len(T): break
     t = f / FPS; j = np.argmin(abs(T - t)); dt = (T[j] - t) * 1000
     if abs(dt) < 120: av.append(dt)
-if av: Z.setdefault('oto', {})['oto_ato_ms'] = round(float(np.median(av)), 1); Z['oto']['oto_ato'] = dict(q1=round(float(np.percentile(av, 25)), 1), q3=round(float(np.percentile(av, 75)), 1), saki=int((np.array(av) < 0).sum()), n=len(av))
+if av: Z.setdefault('oto', {})['oto_ato_ms'] = round(float(np.median(av)), 1); Z['oto']['oto_ato'] = dict(q1=round(float(np.percentile(av, 25)), 1), q3=round(float(np.percentile(av, 75)), 1), saki=int((np.array(av) < 0).sum()), n=len(av), de=de, honmono=honmono)
 # ---- 入りと終わりのフェード（画面の明るさの合計）
 mean = g.reshape(len(g), -1).mean(1); fades = []; ED = [0] + BF + [len(mean)]
 for a, b in zip(ED[:-1], ED[1:]):                    # 板の中だけで見る（次の板の明るさを混ぜん）
