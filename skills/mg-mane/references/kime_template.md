@@ -16,7 +16,7 @@
 
 ## 係へ（最初に読む）
 - 先に `~/.claude/skills/mg-mane/SKILL.md`（一本道 A〜D・数字の目安・残っとる弱み）と `references/kenpin.md` を読む
-- 実例＝`~/.claude/skills/mg-mane/references/手本X_jirei.md`（道具と数字）。道具の型＝`~/research/tehon-me/手本X/tools/`・Remotion の組み＝`proj/src/xz/XZ.tsx`
+- 実例＝`~/.claude/skills/mg-mane/references/tehonX_jirei.md`（道具と数字）。道具の型＝`~/research/tehon-me/手本X/tools/`・Remotion の組み＝`proj/src/xz/XZ.tsx`
 
 ## 🔒 作り方＝構成の写し（これが一番上）
 - 写すのは構成＝置き方・字・カメラの寄り・切り替えのコマ・字の出る/消えるコマ・色・音のタイミング。素材（アバターの顔・アルバムの絵・ロゴの中身）は別の物でええ

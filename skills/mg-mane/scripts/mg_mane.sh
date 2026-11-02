@@ -9,7 +9,7 @@
 set -e
 PY=/usr/bin/python3   # homebrew の python3 には numpy・cv2 が無い（tehon-ikki run.sh と同じ）
 HERE="$(cd "$(dirname "$0")" && pwd)"; SK="$(cd "$HERE/.." && pwd)"
-TI="${TEHON_IKKI_SCRIPTS:-$HOME/.claude/skills/tehon-ikki/scripts}"; [ -d "$TI" ] || TI="$(cd "$HERE/../../.." && pwd)/scripts"   # 公開リポの中（skills/mg-mane）に置いた時はリポの scripts/
+TI="$HOME/.claude/skills/tehon-ikki/scripts"
 abs(){ echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"; }
 absdir(){ mkdir -p "$1" && (cd "$1" && pwd); }   # 作業フォルダは絶対の道で run.sh に渡す
 put_ref(){   # 手本を <作業>/ref/ に置いて、その道を返す（同じファイルなら写さん・BSD cp -n は「もうある」で 1 を返す＝使わん）

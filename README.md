@@ -57,4 +57,4 @@ bash scripts/run.sh doctor                                 # 使える物・足�
 
 
 ## skills/mg-mane（11/2 新設）
-手本のモーショングラフィックス広告（UI が動く・字の打ち込み・ロゴ）を構成ごと写す入口。tehon-ikki の道具を呼ぶだけ。`skills/mg-mane/scripts/mg_mane.sh miru|kime|ikki|ken|kurabe|hakaru`。実例（手本X・12.6秒）＝SSIM 0.94・切り替え 5/5・効果音 Epidemic のみ・-17.4 LUFS。決まりと流れ＝skills/mg-mane/SKILL.md
+手本のモーショングラフィックス広告（UI が動く・字の打ち込み・ロゴ）を構成ごと写す入口。tehon-ikki の道具を呼ぶだけ。`skills/mg-mane/scripts/mg_mane.sh miru|kime|ikki|ken|kurabe|hakaru`。実例（手本X・12.6秒）＝SSIM 0.94・切り替え 5/5・効果音 Epidemic のみ・-17.4 LUFS。決まりと流れ＝skills/mg-mane/SKILL.md。11/3 追加＝20 の技（Particles・Neon glow・Split-flap・Halftone・Art deco 等の Remotion 部品 `assets/waza20`＋図鑑 `references/waza20.md`）・テカリの型（`references/tekari.md`＝SVG の鏡面 3 灯）・実例2（手本N＝MOTION ショーリール：止まっとるカメラの固定・字の出方・数字の回り）

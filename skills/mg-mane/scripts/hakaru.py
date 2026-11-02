@@ -25,7 +25,6 @@ warnings.filterwarnings("ignore")
 from skimage.metrics import structural_similarity as ssim_fn
 
 TOOLS = os.path.expanduser("~/.claude/skills/tehon-ikki/scripts/tools")
-if not os.path.isdir(TOOLS): TOOLS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "scripts", "tools")   # 公開リポの中に置いた時
 SMALL = 480          # 絵の近さ・動き・色を測る横幅（数値の照合.md と同じ）
 CUTW = 320           # 切り替えを測る横幅（tehon-ikki miru の小さいコマと同じ）
 STRONG = 0.08        # 効果音の鳴り始めに数える強さ

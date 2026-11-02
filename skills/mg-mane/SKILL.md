@@ -1,12 +1,12 @@
 ---
 name: mg-mane
-description: 手本のモーショングラフィックス広告（UI が動く・字が打ち込みで出る・ロゴが出る等の After Effects 風 MG）を構成ごと1対1で写す時に使う。「このMGを写して」「モーショングラフィックスの手本で作って」「MGの真似」「After Effects の広告を写して」「mg-mane」。tehon-ikki の構成の写しを MG 向けに固定した物（段0 見る→決め.md→1回で v1→検品→v2・測る・比べる）。新作の MG は motion-cm、実写やエディットの写しは tehon-ikki。
+description: 手本のモーショングラフィックス広告（UI が動く・字が打ち込みで出る・ロゴが出る等の After Effects 風 MG）を構成ごと1対1で写す時に使う。「このMGを写して」「モーショングラフィックスの手本で作って」「MGの真似」「After Effects の広告を写して」「mg-mane」。tehon-ikki の構成の写しを MG 向けに固定した物（段0 見る→決め.md→1回で v1→検品→v2・測る・比べる）。20 の技（Particles・Neon glow・Split-flap・Retro VHS・Art deco・Neo-brutalism 等）の名前で MG を頼まれた時も（部品＝assets/waza20）。新作の MG は motion-cm、実写やエディットの写しは tehon-ikki。
 ---
 
 # MG の写し（mg-mane）
 
 🔒 2026-11-02 本人「素晴らしすぎる・めちゃ成長してる・これはモーショングラフィックスのスキルとして名前を変えて新しくしたい」。
-元＝手本X（Spotify 風 UI の AE 製 MG・1920x1080・29.97fps・12.65秒）を tehon-ikki の「構成の写し」で `run.sh ikki` 1回で写した v2（切り替え 5/5・効果音 ±30ms 29/33・ΔE 中央 0.33・-17.5 LUFS・照合の門🔴0・有料生成 0cr）→ v3 で滑らかさ 0.54→0.37・音は全部 Epidemic（references/手本X_jirei.md）。数字と道具＝`references/手本X_jirei.md`。
+元＝手本X（Spotify 風 UI の AE 製 MG・1920x1080・29.97fps・12.65秒）を tehon-ikki の「構成の写し」で `run.sh ikki` 1回で写した v2（切り替え 5/5・効果音 ±30ms 29/33・ΔE 中央 0.33・-17.5 LUFS・照合の門🔴0・有料生成 0cr）→ v3 で滑らかさ 0.54→0.37・音は全部 Epidemic（references/tehonX_jirei.md）。数字と道具＝`references/tehonX_jirei.md`。
 **道具は tehon-ikki の物を呼ぶだけ（写さん）。** このスキルにあるのは入口・測る・検品の一覧だけ。
 
 - 🔒 目と耳はミリ秒：絵は1コマずつ・音は鳴り始めを `oto_ms` で。ずれは ms の数字で言う（`~/.claude/skills/tehon-ikki/references/me_mimi.md`）
@@ -30,6 +30,23 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 7. **見せる前**：tehon-oracle の門（🔴0・ORACLE_OK.json）→ `kurabe` の上下比べと半透明の重ねを Finder（`open -R`）で。画面は奪わん
 8. **点は2本**：編集の一致（切り替え・字のコマ・動きの波・滑らかさ・音の ms）＝100% を狙う／素材の一致（SSIM）は追わん
 9. 有料生成は要らん想定（アバター・小さい絵は Codex の GPT Image で作る・実在の人の顔は使わん）。使う時は決め.md の線（1本 20cr・合計 100cr）＋CLAUDE.md の Higgsfield と撃つ前の照合（shippai-shoumei）の決まり
+
+## 20 の技（references/waza20.md・assets/waza20）
+🔒 11/2 本人「このそれぞれの名前も覚えて、やり方も覚えて。名前が分かればやり方も分かるようになるから…お前の感性で臨機応変に使えるように」。元＝TikTok 手本M「20 insane Claude animation styles」。
+名前（英語のまま使う）：01 Particles／02 Liquid morph／03 Holographic／04 Neon glow／05 Wireframe 3D／06 Glassmorphism／07 Kinetic type／08 Isometric／09 Clay 3D／10 ASCII art／11 Gradient mesh／12 Comic book／13 Split-flap／14 Retro VHS／15 Halftone／16 Bauhaus／17 Pixel art／18 Blueprint／19 Art deco／20 Neo-brutalism
+- **いつ使う**
+  - 写しで手本に同じ型がある時 → 段 0 で型を見分け（waza20.md「見分ける」）、その部品を土台にして、手本のコマ・色・大きさを測り直して合わせる。決め.md に使う技の番号を書く
+  - 新作で本人が型の名前を言うた時（「Split-flap で」「ネオンで」）→ その部品の props で字と色だけ替える
+  - どの型か決まってない新作 → waza20.md「20 の選び方」の表から場面で選ぶ（迷ったら 1 番目）
+- **部品の呼び方**：`cp -R ~/.claude/skills/mg-mane/assets/waza20/src/waza <作業>/proj/src/waza` で写して `import {W13_SplitFlap} from './waza'` →`<Sequence from={60} durationInFrames={75}><W13_SplitFlap rows={['SALE', ' 50%', ' OFF']} /></Sequence>`。時間は Sequence の頭から 0・`width`/`height` で箱に描く。1 つだけ見る＝`cd assets/waza20 && npx remotion render src/index.ts W13-SplitFlap out/w13.mp4 --gl=angle`（ID＝W01-Particles … W20-NeoBrutalism・20 本続き＝All20）
+- **感性で選ぶ時の決まり**
+  1. 1 本の動画で 3 型まで（主役 1・脇 1〜2）
+  2. 色の系統をそろえる：主役の型の色（か商品のブランドの色）を `colors` で脇の型にも渡す
+  3. 動きの速さをそろえる：山がはっきりした型（07・12・20）と流れる型（02・03・11）を同じ場面に置く時は、流れる型を `speed` で遅くして背景に回す
+  4. 字を読ませる所は字の板を止める（止まってから 0.5 秒以上）
+- **作る前に読む**：その技の項（waza20.md の見た目・動きのコマ・作り方・落とし穴・音の探す語）。検品は v3（11/03）で ◯20（03・10・15・19 は手本を測り直して直した＝各項の「v3 で直した」）
+- **部品を手本に合わせて直す時**：手本の数字は 2 通りで測り、直した still も同じ道具で測り返して合わせる（v2 は 19 の扇の開き・15 の輪の傾きを読み違えた）。並べる時は手本を幅 1080 に拡大して同じ幅で切る
+- **確かめる**：`python3 assets/waza20/ken.py <All20.mp4> <出す所>`（手本の keys｜うち 15 コマおき）・`ugoki.py`（動きの量の比）。手本の札＝`assets/waza20/tehon/`
 
 ## 一本道（入口 `M=~/.claude/skills/mg-mane/scripts/mg_mane.sh`）
 | 段 | やる事 | 命令 | 門（次へ行く条件） |
@@ -76,7 +93,7 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 4. **UI の速い流し（70〜84・波 0.85）**：縦の強いブレと出方の重なり。直し＝ブレの長さを手本の縦の伸びから1コマずつ測る
 
 ## ファイルの場所
-- このスキル：`scripts/mg_mane.sh`（入口：miru・kime・ikki・ken・kurabe・hakaru）・`scripts/hakaru.py`（測る）・`scripts/ken.py`（検品の一覧）・`references/kime_template.md`（決め.md の型）・`references/kenpin.md`（検品の手順）・`references/手本X_jirei.md`（実例・道具と数字・ミス）
+- このスキル：`scripts/mg_mane.sh`（入口：miru・kime・ikki・ken・kurabe・hakaru）・`scripts/hakaru.py`（測る）・`scripts/ken.py`（検品の一覧）・`references/kime_template.md`（決め.md の型）・`references/kenpin.md`（検品の手順）・`references/tehonX_jirei.md`（実例・道具と数字・ミス）・`references/tehonN_jirei.md`（実例2＝MOTION ショーリール・カメラの固定・出方・数字の回り）・`references/tekari.md`（金属・つやの作り方＝#chrome フィルタ）・`references/waza20.md`（20 の技の図鑑）・`assets/waza20/`（20 の技の Remotion 部品・手本の札・検品の道具・`out/All20.mp4`・`out/検品表.md`）
 - tehon-ikki（呼ぶだけ・写さん）：`scripts/run.sh`（miru・ikki・meshiken・guard）・`scripts/ikki_loop.sh`・`references/loop_prompt.md`・`references/miru.md`（段0 の升と道具）・`scripts/tools/oto_ms.py`
 - 照合の門：`~/.claude/skills/tehon-oracle/scripts/oracle.py`（`spec <手本>` → `check <作業>/ref/ORACLE_SPEC_vsl.json <うち>`）
 - 実例の道具と組み（型として読む）：`~/research/tehon-me/手本X/tools/`（cam_track・cam_cum・mosaic・pagewarp・gridcrop・txt_bbox・bg_field・cam_refine・cam_apply）・`proj/src/xz/XZ.tsx`

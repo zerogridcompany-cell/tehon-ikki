@@ -3,7 +3,7 @@
 本人「素晴らしすぎる・めちゃ成長してる」。tehon-ikki の構成の写しを `run.sh ikki` 1回で回し、v2 で止めた。有料生成 0cr。
 
 ## 手本
-- TikTok @手本X「Did we just make a better @Spotify ad than Spotify?」（（手本X の URL）
+- TikTok の手本X（音楽アプリ風 UI の広告・12.6 秒）
 - 1920x1080・29.97fps・379コマ・12.65秒・-17.4 LUFS。After Effects の MG（Spotify 風の UI・字の打ち込み・ロゴ）。暗い緑の光の地
 - 実写なし・人なし（丸いアバターの小さい写真だけ）・語りなし・曲は Shazam 当たらず（作り手のオリジナルのパッド）
 - 作業＝`~/research/tehon-me/手本X/`（決め.md・rikai/・tools/・proj/src/xz/XZ.tsx・手本X_kousei_v1.mp4・v2.mp4・mise/）
