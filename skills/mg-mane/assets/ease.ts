@@ -16,7 +16,21 @@ export type Ease =
   | {kind: 'back_out'; c: number}
   | {kind: 'bounce'}
   | {kind: 'spring'; w: number; z: number; v0?: number}
+  | {kind: 'elastic'; a?: number; p?: number}
+  | {kind: 'steps'; n: number}
   | {kind: 'smooth'};
+
+// 11/3 名前つきの既定（@uiuxmanuel「同じ距離を 1.4 秒・違うのは easing だけ」）：出る＝out・消える＝in・移動＝inout・回る/ループ＝linear・味＝overshoot（控えめ）・弾む＝elastic/bounce・段＝steps
+export const EASE = {
+  out:   {kind: 'bezier', x1: 0.16, y1: 1, x2: 0.3, y2: 1} as Ease,        // expo-out に近い（最初速くて後ゆっくり）
+  in:    {kind: 'bezier', x1: 0.7, y1: 0, x2: 0.84, y2: 0} as Ease,        // 消える
+  inout: {kind: 'bezier', x1: 0.65, y1: 0, x2: 0.35, y2: 1} as Ease,       // 画面の中を移動
+  linear:{kind: 'linear'} as Ease,                                           // 回る・ループ・読み込みの輪
+  overshoot: {kind: 'back_out', c: 1.70158} as Ease,                        // 行き過ぎて戻る（控えめ・1 本に 1〜2 回）
+  elastic: {kind: 'elastic', a: 1, p: 0.4} as Ease,                         // ビヨンと数回
+  bounce: {kind: 'bounce'} as Ease,                                          // 床で跳ねる
+  steps: {kind: 'steps', n: 8} as Ease,                                      // カクカク（数字の回り・フリップ）
+} as const;
 export type Seg =
   | {kind: 'move'; t0: number; t1: number; from: number; to: number; ease: Ease}
   | {kind: 'hold'; t0: number; t1: number; v: number};
@@ -84,6 +98,8 @@ export const ez = (e: Ease, u0: number): number => {
     case 'bezier': return bez(u, e.x1, e.y1, e.x2, e.y2);
     case 'back_out': return 1 + (e.c + 1) * Math.pow(u - 1, 3) + e.c * Math.pow(u - 1, 2);
     case 'bounce': return bounceOut(u);
+    case 'elastic': { const a = e.a ?? 1, p = e.p ?? 0.4; if (u === 0 || u === 1) return u; return a * Math.pow(2, -10 * u) * Math.sin((u - p / 4) * (2 * Math.PI) / p) + 1; }
+    case 'steps': return Math.floor(u * e.n) / e.n;
     case 'spring': return springT(u * 30, e.w, e.z, e.v0 ?? 0); // 予備（spring は kfAt で t を使う）
   }
 };
