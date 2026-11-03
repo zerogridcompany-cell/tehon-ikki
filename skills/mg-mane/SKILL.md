@@ -25,6 +25,7 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 2. **全部 Remotion で描く**（10/14「字幕は絶対モーショングラフィックスのスキルで」）：UI・字・札・板・ロゴ。PIL・ffmpeg で字を焼かん。ロゴは SVG
 3. **絵は動画で**（10/30「見てて苦しい」）：一枚絵を寄せて動画のふりをせん。UI の寄り・流しは Remotion の中で動かす
 4. **効果音は Epidemic Sound だけ**（10/30「前に持ってきた物は全部捨てる」）：`~/.claude/skills/oto-bunrui/scripts/epidemic_hq.py`（Dia 9336・HQ）。sfx_premium・無料パック・自作の音は使わん。曲は Shazam で当たればその曲、当たらんなら Epidemic で近い曲。🔴 おすすめ・プラン変更・クレジット購入は押さん
+5b. 🔒 係の止める条件＝mg-mane の門を全部通ったら DONE（tehon-ikki の輪の SSIM 0.997 は追わん・11/3 Amazon で係が SSIM を追って v28 まで回った＝kime_template の「止める条件」）
 5. **v2 で終わり**（10/31「良くて v2 まで」）：v1 を1回で組む→検品→v2。v3 は本人が「もう少し寄せて」と言うた時だけ
 6. **検品は自分で**（11/1「とにかく自分で検品して」）：6コマおきの一覧を頭から終わりまで全部見て検品表 → 直したらもう一回全部（`references/kenpin.md`）
 7. **見せる前**：tehon-oracle の門（🔴0・ORACLE_OK.json）→ `kurabe` の上下比べと半透明の重ねを Finder（`open -R`）で。画面は奪わん
