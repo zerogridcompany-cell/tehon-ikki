@@ -21,6 +21,15 @@ def measure_frame(im):
     r25=np.mean([at(cx+0.25*np.cos(a),cy+0.25*np.sin(a)) for a in np.linspace(0,2*np.pi,8,endpoint=False)])
     r50=np.mean([at(cx+0.5*np.cos(a),cy+0.5*np.sin(a)) for a in np.linspace(0,2*np.pi,8,endpoint=False)])
     ang=float(np.degrees(np.arctan2((cy-0.5)*H,(cx-0.5)*W)))   # 光の中心が画面の真ん中からどっちにあるか（真ん中なら 0 付近・弱い）
+    # 光の断面（中心から 8 方向の平均・幅の 2% 刻み・24 点・山で割って 0..1）
+    lprof=[]
+    for i in range(24):
+        r=0.02*(i+1); lprof.append(np.mean([at(cx+r*np.cos(a)*(H/W if False else 1),cy+r*np.sin(a)*(W/H)) for a in np.linspace(0,2*np.pi,8,endpoint=False)]))
+    base=float(np.percentile(bg,5)); lprof=[(v-base)/max(peak-base,1e-3) for v in lprof]; lprof=[float(np.clip(v,0,1)) for v in lprof]
+    slopes=[lprof[i]-lprof[i+1] for i in range(len(lprof)-1)]; edge=float(max(slopes)) if slopes else 0.0   # 1 刻み（幅 2%）でどれだけ落ちるか＝崖の硬さ
+    # ガウスの σ（断面を exp(-r²/2σ²) で最小二乗・r は幅の割合）
+    rs=np.array([0.02*(i+1) for i in range(24)]); pv=np.array(lprof); m=pv>0.05
+    sig=float(np.sqrt(np.sum(rs[m]**2*pv[m])/max(np.sum(-2*np.log(pv[m])*pv[m]),1e-6))) if m.sum()>3 else 0.0
     corners=np.mean([bg[:H//8,:W//8].mean(),bg[:H//8,-W//8:].mean(),bg[-H//8:,:W//8].mean(),bg[-H//8:,-W//8:].mean()]); vig=float(corners/max(bg[H//2-H//8:H//2+H//8,W//2-W//8:W//2+W//8].mean(),1e-3))
     mid=(Lc>15)&(Lc<70); a_=float(L[:,:,1][mid].mean()) if mid.any() else 0.0; b_=float(L[:,:,2][mid].mean()) if mid.any() else 0.0
     # にじみ＝明るい物（L>60 の小さいぼかし）の縁から外へ
@@ -42,7 +51,7 @@ def measure_frame(im):
     # 面の向き（縁の向きの割合）
     gxs=cv2.Sobel(Lc,cv2.CV_32F,1,0); gys=cv2.Sobel(Lc,cv2.CV_32F,0,1); mag=np.hypot(gxs,gys); strong=mag>np.percentile(mag,95)
     th=np.degrees(np.arctan2(gys[strong],gxs[strong]))%180; hist=np.histogram(th,bins=[0,22.5,67.5,112.5,157.5,180])[0].astype(float); hist[0]+=hist[-1]; hist=hist[:-1]; hist/=max(hist.sum(),1)
-    return {'hikari':{'cx':round(cx,3),'cy':round(cy,3),'peak':round(peak,1),'r25':round(r25/max(peak,1e-3),3),'r50':round(r50/max(peak,1e-3),3),'ang':round(ang,0),'vig':round(vig,3),'a':round(a_,1),'b':round(b_,1),'meanL':round(float(Lc.mean()),1)},
+    return {'hikari':{'cx':round(cx,3),'cy':round(cy,3),'peak':round(peak,1),'r25':round(r25/max(peak,1e-3),3),'r50':round(r50/max(peak,1e-3),3),'ang':round(ang,0),'vig':round(vig,3),'a':round(a_,1),'b':round(b_,1),'meanL':round(float(Lc.mean()),1),'prof':[round(v,3) for v in lprof],'edge':round(edge,3),'sig':round(sig,3)},
             'nijimi':{'r_px':halo_r,'l20':round(halo_l,1)},'mono':boxes,'men':{'yoko':round(hist[0],2),'naname1':round(hist[1],2),'tate':round(hist[2],2),'naname2':round(hist[3],2)},'chizu':np.round(small,0).astype(int).tolist()}
 def measure(src,out,step,kukan):
     cap=cv2.VideoCapture(src); n=int(cap.get(7)); rows=[]; k=0
@@ -59,7 +68,7 @@ def measure(src,out,step,kukan):
             if not sel: continue
             def m(path):
                 v=[r[path[0]][path[1]] for r in sel]; return round(float(np.mean(v)),3)
-            ks.append({'name':name,'a':a,'b':b,'hikari':{key:m(('hikari',key)) for key in ['cx','cy','peak','r25','r50','ang','vig','a','b','meanL']},'nijimi':{'r_px':m(('nijimi','r_px')),'l20':m(('nijimi','l20'))},'men':{key:m(('men',key)) for key in ['yoko','naname1','tate','naname2']},'mono_n':round(float(np.mean([len(r['mono']) for r in sel])),1)})
+            ks.append({'name':name,'a':a,'b':b,'hikari':{**{key:m(('hikari',key)) for key in ['cx','cy','peak','r25','r50','ang','vig','a','b','meanL','edge','sig']},'prof':[round(float(np.mean([r['hikari']['prof'][i] for r in sel])),3) for i in range(24)]},'nijimi':{'r_px':m(('nijimi','r_px')),'l20':m(('nijimi','l20'))},'men':{key:m(('men',key)) for key in ['yoko','naname1','tate','naname2']},'mono_n':round(float(np.mean([len(r['mono']) for r in sel])),1)})
         res['kukan']=ks
     json.dump(res,open(out,'w'))
     print(f'測った {len(rows)} コマ → {out}')
@@ -68,15 +77,16 @@ def measure(src,out,step,kukan):
         for q in res['kukan']:
             h=q['hikari']; print(f"{q['name']} | {h['cx']*100:.0f},{h['cy']*100:.0f} | {h['peak']:.0f} | {h['r25']:.2f}/{h['r50']:.2f} | {h['ang']:.0f} | {h['vig']:.2f} | {h['a']:+.0f}/{h['b']:+.0f} | {q['nijimi']['r_px']:.0f}/{q['nijimi']['l20']:.0f} | {q['mono_n']}")
 def cmp(A,B,md,png):
-    A=json.load(open(A)); B=json.load(open(B)); lines=['# 画面の差（手本｜うち）','','| 区間 | 光の中心のずれ(%) | 山L 手本→うち | 落ち r50 | 向き° | 減光 | 色 a/b | にじみ px | 判定 |','|---|---|---|---|---|---|---|---|---|']
+    A=json.load(open(A)); B=json.load(open(B)); lines=['# 画面の差（手本｜うち）','','| 区間 | 中心ずれ(%) | 山L | 断面の差(RMSE) | 縁の硬さ 手本→うち | σ 手本→うち | 減光 | 色 a/b | にじみ px | 判定 |','|---|---|---|---|---|---|---|---|---|---|']
     kb={q['name']:q for q in B.get('kukan',[])}; red=0
     for q in A.get('kukan',[]):
         p=kb.get(q['name']);
         if not p: continue
         h,g=q['hikari'],p['hikari']; dc=np.hypot(h['cx']-g['cx'],h['cy']-g['cy'])*100; dpk=g['peak']-h['peak']; dr=g['r50']-h['r50']; dang=abs((h['ang']-g['ang']+180)%360-180) if np.hypot(h['cx']-0.5,h['cy']-0.5)>0.08 else 0; dvig=g['vig']-h['vig']; dab=np.hypot(h['a']-g['a'],h['b']-g['b']); rn=p['nijimi']['r_px']/max(q['nijimi']['r_px'],1)
-        bad=(dc>5)+(abs(dpk)>6)+(abs(dr)>0.1)+(dang>30 and h['r50']<0.9)+(abs(dvig)>0.1)+(dab>4)+(rn<0.6 or rn>1.6); j='🔴' if bad>=2 else ('🟡' if bad==1 else '🟢'); red+=j=='🔴'
-        lines.append(f"| {q['name']} | {dc:.1f} | {h['peak']:.0f}→{g['peak']:.0f} | {h['r50']:.2f}→{g['r50']:.2f} | {h['ang']:.0f}→{g['ang']:.0f} | {h['vig']:.2f}→{g['vig']:.2f} | {h['a']:+.0f}/{h['b']:+.0f}→{g['a']:+.0f}/{g['b']:+.0f} | {q['nijimi']['r_px']:.0f}→{p['nijimi']['r_px']:.0f} | {j} |")
-    lines.append(f'\n🔴 {red}（目安：中心のずれ ≤5%・山 ±6・落ち ±0.1・向き ±30°・減光 ±0.1・色 ±4・にじみ 0.6〜1.6倍。2つ外れたら🔴）')
+        pr=float(np.sqrt(np.mean((np.array(h.get('prof',[0]*24))-np.array(g.get('prof',[0]*24)))**2))); er=g.get('edge',0)/max(h.get('edge',1e-3),1e-3); sr=g.get('sig',0)/max(h.get('sig',1e-3),1e-3)
+        bad=(dc>5)+(abs(dpk)>6)+(pr>0.08)+(er>1.8 or er<0.55)+(sr<0.7 or sr>1.4)+(abs(dvig)>0.1)+(dab>4)+(rn<0.6 or rn>1.6); j='🔴' if bad>=2 else ('🟡' if bad==1 else '🟢'); red+=j=='🔴'
+        lines.append(f"| {q['name']} | {dc:.1f} | {h['peak']:.0f}→{g['peak']:.0f} | {pr:.3f} | {h.get('edge',0):.2f}→{g.get('edge',0):.2f} | {h.get('sig',0):.2f}→{g.get('sig',0):.2f} | {h['vig']:.2f}→{g['vig']:.2f} | {h['a']:+.0f}/{h['b']:+.0f}→{g['a']:+.0f}/{g['b']:+.0f} | {q['nijimi']['r_px']:.0f}→{p['nijimi']['r_px']:.0f} | {j} |")
+    lines.append(f'\n🔴 {red}（目安：中心 ≤5%・山 ±6・断面 RMSE ≤0.08・縁の硬さ 0.55〜1.8倍・σ 0.7〜1.4倍・減光 ±0.1・色 ±4・にじみ 0.6〜1.6倍。2つ外れたら🔴）')
     txt='\n'.join(lines); print(txt)
     if md: open(md,'w').write(txt+'\n')
     if png:   # 重ね＝区間の代表コマの地の明るさの地図（手本｜うち｜差）
@@ -86,8 +96,15 @@ def cmp(A,B,md,png):
             f=min((x for x in fa if q['a']<=x<=q['b']),default=None)
             if f is None or f not in fb: continue
             a=np.array(fa[f]['chizu'],float); b=np.array(fb[f]['chizu'],float); d=np.abs(a-b)
-            row=np.hstack([a,b,d*2]); tiles.append(cv2.resize(row,(3*192,108),interpolation=cv2.INTER_NEAREST))
-        img=np.clip(np.vstack(tiles)*2.55,0,255).astype(np.uint8); cv2.imwrite(png,img); print('重ね→',png,'（左＝手本・中＝うち・右＝差×2・1段＝1区間）')
+            row=np.hstack([a,b,d*2]); tile=cv2.resize(row,(3*192,108),interpolation=cv2.INTER_NEAREST)
+            graph=np.zeros((108,192),np.float32)+10
+            pa=fa[f]['hikari'].get('prof'); pb=fb[f]['hikari'].get('prof')
+            if pa and pb:
+                for i in range(23):
+                    cv2.line(graph,(int(i*8),int(100-pa[i]*90)),(int((i+1)*8),int(100-pa[i+1]*90)),100,2)
+                    cv2.line(graph,(int(i*8),int(100-pb[i]*90)),(int((i+1)*8),int(100-pb[i+1]*90)),55,1)
+            tiles.append(np.hstack([tile,graph]))
+        img=np.clip(np.vstack(tiles)*2.55,0,255).astype(np.uint8); cv2.imwrite(png,img); print('重ね→',png,'（左＝手本・中＝うち・差×2・一番右＝光の断面図：太い白＝手本・細い灰＝うち／1段＝1区間）')
 if __name__=='__main__':
     a=sys.argv[1:]
     if not a: print(__doc__); sys.exit(1)
