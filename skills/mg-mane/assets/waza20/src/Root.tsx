@@ -1,5 +1,7 @@
 // 20 の技（mg-mane assets/waza20）：1つずつの Composition（W01_Particles …・1080x1920・30fps・2.5秒）＋ All20（20本を順に・左上に番号と名前）
 import React from 'react';
+import {Ekonte} from './ekonte/Ekonte';
+import ekonteProps from './ekonte/props.json';
 import {AbsoluteFill, Composition, Sequence} from 'remotion';
 import {WAZA} from './waza';
 
@@ -28,5 +30,6 @@ export const RemotionRoot: React.FC = () => (
   <>
     {WAZA.map((w) => <Composition key={w.id} id={w.id} component={w.C} durationInFrames={SEC} fps={30} width={1080} height={1920} />)}
     <Composition id="All20" component={All20} durationInFrames={SEC * WAZA.length} fps={30} width={1080} height={1920} />
-  </>
+        <Composition id="Ekonte" component={Ekonte as any} durationInFrames={Math.max(1, Math.ceil((ekonteProps as any).dur*(ekonteProps as any).fps))} fps={(ekonteProps as any).fps} width={(ekonteProps as any).width} height={(ekonteProps as any).height} defaultProps={ekonteProps as any} />
+</>
 );

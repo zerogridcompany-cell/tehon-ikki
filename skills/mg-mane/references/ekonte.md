@@ -10,7 +10,7 @@
    {"ku":"Global Sound","t":[2.4,3.5],"kousei":"中央に題・下に丸3つ横並び","mono":[{"what":"題","at":"上中","size":"中"},{"what":"丸い札×3","at":"中央","size":"小"}],"ugoki":"丸は左から順に pop（07 Kinetic）・題は打ち込み","waza":[7],"oto":"pop×3・打ち込み tick"}
    ```
    `at` は 9 分割（上左〜下右）で書く・`size` は 大/中/小（画面の高さの 40/20/10%）
-4. **下書き板を書き出す**（`scripts/ekonte_board.py ekonte.json → ekonte_v0.mp4`）：Remotion で灰色の箱＋ラベルだけの低解像度の動画（色・動き無し・秒は声のまま）。手本と同じく**左＝絵コンテ・右＝（後で）完成**の並びで見せる → 依頼者の OK（ここで構図・順番・秒を直す。本番の後に直さん）
+4. **下書き板を書き出す**（`scripts/ekonte_board.py ekonte.json ekonte_v0.mp4 [--w 1080 --h 1920 --fps 30] [--voice vo.wav]`＝assets/waza20 の Composition「Ekonte」・11/3 試し＝~/research/tehon-me/ekonte/test/ekonte_v0.mp4）：Remotion で灰色の箱＋ラベルだけの低解像度の動画（色・動き無し・秒は声のまま）。手本と同じく**左＝絵コンテ・右＝（後で）完成**の並びで見せる → 依頼者の OK（ここで構図・順番・秒を直す。本番の後に直さん）
 5. 本番＝OK の絵コンテの箱に 20 の技（waza20）・色・音を入れる。構図は絵コンテから動かさん
 6. 門＝完成と絵コンテの一致：物の箱の位置の IoU ≥0.7・字の出る秒 ±2コマ（jimaku-sync の秒）・場面の数が同じ。見せる時は左右並び（kurabe と同じ道具で 絵コンテ_v0｜完成）
 
