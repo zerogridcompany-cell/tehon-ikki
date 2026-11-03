@@ -31,9 +31,11 @@ def saiten(Z, S, add, NASHI):
     # 1 カットの位置（±1コマ）
     if 'cuts' in S:
         ev = S['cuts']; ok = set(S.get('cuts_ok_extra', []))
-        hit = sum(any(abs(e - f) <= 1 for f in f0s) for e in ev)
-        extra = [f for f in f0s if not any(abs(e - f) <= 1 for e in ev) and not any(abs(e - f) <= 1 for e in ok)]
-        miss = [e for e in ev if not any(abs(e - f) <= 1 for f in f0s)]
+        lo = lambda e: e[0] if isinstance(e, list) else e; hi_ = lambda e: e[1] if isinstance(e, list) else e   # 答えは1コマか [頭, 終わり]（ホイップの間のどこか・11/2）
+        on = lambda e, f: lo(e) - 1 <= f <= hi_(e) + 1
+        hit = sum(any(on(e, f) for f in f0s) for e in ev)
+        extra = [f for f in f0s if not any(on(e, f) for e in ev) and not any(abs(e - f) <= 1 for e in ok)]
+        miss = [e for e in ev if not any(on(e, f) for f in f0s)]
         add('カットの位置（±1コマ）', hit / len(ev) * (1 - len(extra) / max(1, len(f0s))) if f0s else 0,
             f'{len(f0s)}回（当たり {hit}・余計 {len(extra)}{(" " + str(extra[:8])) if extra else ""}・見落とし {miss[:8]}）', f'{len(ev)}回')
     else: NASHI.setdefault('cuts', '答えなし')
@@ -120,7 +122,7 @@ def saiten(Z, S, add, NASHI):
     if S.get('moji'):
         W = Z.get('moji', {}).get('words', []); HH = S.get('H') or Z['meta'].get('H'); unit = S.get('moji_unit', 'word')
         fnd = d0 = d1 = bx = hk = 0; fo = []; miss = []
-        # 🔒11/2：出る・消えるの物差しは答えの作り方で2つある＝「見え始め・見え終わり」（f0/f1・r2/51/手本J の答え＝cap_time の相関）と「はっきり見える」（f0_koi/f1_koi・手本S の答え＝白い画素が落ち着いた量の半分以上）。見る段は両方を出し、どちらかが ±1 なら当たり
+        # 🔒11/2：出る・消えるの物差しは答えの作り方で2つある＝「見え始め・見え終わり」（f0/f1・r2/51/tehonJ の答え＝cap_time の相関）と「はっきり見える」（f0_koi/f1_koi・tehonS の答え＝白い画素が落ち着いた量の半分以上）。見る段は両方を出し、どちらかが ±1 なら当たり
         q0 = lambda w: min(abs(w['f0'] - m['f0']), abs(w.get('f0_koi', w['f0']) - m['f0']))
         q1 = lambda w: min(abs(w['f1'] - m['f1']), abs(w.get('f1_koi', w['f1']) - m['f1']))
         for m in S['moji']:
@@ -165,3 +167,34 @@ def saiten(Z, S, add, NASHI):
             if sr is not None: a.append(v); b.append(sr)
         rk = lambda v: np.argsort(np.argsort(v)); rho = np.corrcoef(rk(a), rk(b))[0, 1] if len(a) > 3 else 0
         add('色と粒（ぼけの順位）', max(0, -rho), f'鋭さとの順位相関 {rho:+.2f}', f'{len(a)}場面（ぼけ σ が大きい＝鋭さが低いはず）')
+    # 16〜19 字の点滅・厚み・後ろ・反転（11/2 tehonJ＝見る段の moji_plus.py）
+    if S.get('tenmetsu') or S.get('ushiro') or S.get('atsumi'):
+        T = Z.get('moji_track', []); A = {m['id']: m for m in S.get('moji', []) if m.get('id')}
+        def match(m):
+            c = [((min(o['f1'], m['f1']) - max(o['f0'], m['f0'])) / max(1, m['f1'] - m['f0']), iou(o['box_px'], m['box']), o) for o in T]
+            c = [x for x in c if x[0] > 0.3 and x[1] >= 0.3]
+            return max(c, key=lambda x: x[0] * x[1])[2] if c else None
+        MT = {k: match(m) for k, m in A.items()}
+        if S.get('tenmetsu'):
+            ans = {(k, f) for k, v in S['tenmetsu'].items() for f in v['kesu']}; det = set()
+            for k, v in S['tenmetsu'].items():
+                o = MT.get(k)
+                if o: det |= {(k, f) for f in o['kesu'] if v['f0'] <= f <= v['f1']}
+            near = lambda x, Y: any(x[0] == y[0] and abs(x[1] - y[1]) <= 1 for y in Y)
+            r = np.mean([near(a, det) for a in ans]) if ans else 1; p = np.mean([near(d, ans) for d in det]) if det else (1 if not ans else 0)
+            nw = sum(bool(v['kesu']) for v in S['tenmetsu'].values()); fw = sum(bool(v['kesu']) and MT.get(k) is not None for k, v in S['tenmetsu'].items())
+            add('字の点滅（消えるコマ ±1）', 2 * r * p / max(1e-6, r + p), f'取れた {r:.0%}・正しい {p:.0%}・点滅する字 {nw} 中 字が見つかった {fw}', f'{len(ans)}コマ（{nw}語）')
+        for key, name in (('ushiro', '字が人の後ろか'), ('atsumi', '字の厚み・影')):
+            if not S.get(key): continue
+            tp = tn = P = Nn = 0
+            for k, v in S[key].items():
+                o = MT.get(k); d = bool(o and o.get(key + '_ari'))
+                if v: P += 1; tp += d
+                else: Nn += 1; tn += (not d)
+            sc = 0.5 * (tp / max(1, P) + tn / max(1, Nn)) if P and Nn else (tp / max(1, P) if P else tn / max(1, Nn))
+            add(name, sc, f'ありを当てた {tp}/{P}・なしを当てた {tn}/{Nn}', f'あり {P}・なし {Nn}（ありとなしの当たりの平均）')
+    if 'hanten' in S:
+        sh = [(a, b) for a, b in S.get('hanten_shiran', [])]; cu = [c for c in S.get('cuts', []) if not isinstance(c, list)]
+        dz = [h['f'] for h in Z.get('hanten', []) if not any(a <= h['f'] <= b for a, b in sh) and not any(abs(h['f'] - c) <= 1 for c in cu)]
+        an = S['hanten']; r = np.mean([any(abs(a - d) <= 1 for d in dz) for a in an]) if an else 1; p = np.mean([any(abs(a - d) <= 1 for a in an) for d in dz]) if dz else (0 if an else 1)   # 反転なしの手本で何も拾わん＝満点（11/2）
+        add('反転の切り替わり（±1コマ）', 2 * r * p / max(1e-6, r + p), f'{len(dz)}回（取れた {r:.0%}・正しい {p:.0%}）', f'{len(an)}回')

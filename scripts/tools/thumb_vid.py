@@ -21,10 +21,10 @@ os.makedirs(f"{w}/src/thumbvid", exist_ok=True)
 for k, vid in todo[:a.max]:
     out = f"{w}/src/thumbvid/{vid}.mp4"
     if not os.path.exists(out):
-        subprocess.run(["yt-dlp", "--cookies-from-browser", "chrome", "-f", "bv*[height<=1080][ext=mp4]/bv*[height<=1080]", "--remux-video", "mp4", "-o", out, f"https://www.youtube.com/watch?v={vid}"], capture_output=True); time.sleep(10)
+        subprocess.run(["yt-dlp", "--cookies-from-browser", "chrome", "-f", "bv*[height<=1080][ext=mp4]/bv*[height<=1080]", "--remux-video", "mp4", "-o", out, f"〈URL〉], capture_output=True); time.sleep(10)
     if not os.path.exists(out): print(k, vid, "落とせんかった"); continue
     dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", out], capture_output=True, text=True).stdout.strip() or 0)
     f0, f1 = segs[k]; t = 0.0
     while t < dur:
-        r = subprocess.run([sys.executable, f"{T}/vid_patch.py", w, k, out, f"{t:.1f}", f"{min(dur, t + 65):.1f}", "--frames", f"{f0}-{f1 - 1}"], capture_output=True, text=True)
+        r = subprocess.run(["/usr/bin/python3", f"{T}/vid_patch.py", w, k, out, f"{t:.1f}", f"{min(dur, t + 65):.1f}", "--frames", f"{f0}-{f1 - 1}"], capture_output=True, text=True)
         print(k, vid, f"{t:.0f}s", r.stdout.count("入れた"), "コマ入れた"); t += 60

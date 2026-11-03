@@ -24,7 +24,7 @@ if force or not os.path.exists(b.p('states.json')):
     for i, (f0, f1) in enumerate(zip(edges[:-1], edges[1:])):
         lo = f0 + int((f1 - f0) * 0.4); cand = list(range(max(f0 + 1, lo), f1)) or [f0]
         br = {f: float(small[f].mean()) for f in range(f0, f1)}; top = max(br.values())
-        cand = [f for f in cand if br[f] >= 0.85 * top] or [max(br, key=br.get)]   # 🔴 暗くなり切ったコマを選ばん（手本R の最後の板は消えかけ＝字が読めず消えのフェードが抜けた）
+        cand = [f for f in cand if br[f] >= 0.85 * top] or [max(br, key=br.get)]   # 🔴 暗くなり切ったコマを選ばん（tehonR の最後の板は消えかけ＝字が読めず消えのフェードが抜けた）
         rep = min(cand, key=lambda f: (round(float(d[f - 1]) if f > 0 else 0.0, 2), -f))   # 一番止まっとるコマ（同じなら後ろ＝入りのフェードが終わった所）
         st.append(dict(i=i, f0=f0, f1=f1, rep=int(rep)))
     json.dump(st, open(b.p('states.json'), 'w'))

@@ -1,4 +1,4 @@
-// 11 Gradient mesh（溶けて流れる色の面）— 手本 手本M 11：珊瑚・すみれ・青緑・桃の4〜5色が、絵の具を混ぜるようにゆっくり流れ続ける（動きの量 3〜6/コマで一定）
+// 11 Gradient mesh（溶けて流れる色の面）— 手本 tehonM 11：珊瑚・すみれ・青緑・桃の4〜5色が、絵の具を混ぜるようにゆっくり流れ続ける（動きの量 3〜6/コマで一定）
 // canvas 2D の画素計算：ゆがめた雑音（domain warp：fbm を fbm でずらす×2回）→ 値を色の段に当てる。1/4 の解像度で計算して拡大＋細かい粒
 import React, {useLayoutEffect, useMemo, useRef} from 'react';
 import {useCurrentFrame, useVideoConfig} from 'remotion';

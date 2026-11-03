@@ -1,4 +1,4 @@
-"""音の鳴り始めを 1ms より細かく出す（10/31 依頼者「基本コンマ単位で見て。人が見るより繊細に」）。拍の網（beat_track）は使わん＝実際の音より約45ms 遅れて出る（手本R で実測）。
+"""音の鳴り始めを 1ms より細かく出す（10/31 依頼者「基本コンマ単位で見て。人が見るより繊細に」）。拍の網（beat_track）は使わん＝実際の音より約45ms 遅れて出る（tehonR で実測）。
 
 python3 oto_ms.py <音.wav> <出す.json> [--band 30,150] [--delta 0.2]
 from oto_ms import tachiagari;  T = tachiagari(y, sr, band=None)  → [{t, peak_t, rise_ms, strength}]

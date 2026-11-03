@@ -1,7 +1,7 @@
 # 20 の技（モーショングラフィックスの型）図鑑
 
 🔒 2026-11-02 本人「このそれぞれの名前も覚えて、やり方も覚えて。名前が分かればやり方も分かるようになるから。全部（20 項目）できるように…お前の感性で臨機応変に使えるように」。
-- 元＝TikTok 手本M「20 insane Claude animation styles」（1080x1920・30fps・28 秒）。20 の札を 1 つずつ切り出した手本＝`assets/waza20/tehon/NN_Name/clip.mp4`（410x480・30fps・1〜1.8 秒）と `keys.jpg`（6 コマ）・測った数字＝`tehon/sokutei.json`
+- 元＝TikTok @tehonM「20 insane Claude animation styles」（1080x1920・30fps・28 秒）。20 の札を 1 つずつ切り出した手本＝`assets/waza20/tehon/NN_Name/clip.mp4`（410x480・30fps・1〜1.8 秒）と `keys.jpg`（6 コマ）・測った数字＝`tehon/sokutei.json`
 - 部品＝`assets/waza20/src/waza/W01_Particles.tsx` … `W20_NeoBrutalism.tsx`（Remotion・1 つで完結・props で色と字を替える・外の画像なし）
 - 名前は英語のまま使う（本人もこの名前で言う）。数字の「fN」＝手本の札の頭から N コマ目（30fps）。「動きの量」＝隣のコマとの差の平均（グレー 0〜255・札 410x480）
 - 検品の結果＝`assets/waza20/out/検品表.md`（v1 ◯6 → v2 ◯16・△4 → v3（11/03）◯20。03・10・15・19 は手本を測り直して直した＝各項目の「v3 で直した」）
@@ -123,6 +123,7 @@ import {W13_SplitFlap, W07_KineticType} from './waza';
 - **感性**：1 場面 1 語・3〜4 語で終わる・色は 2 色＋生成り。やりすぎの線＝語ごとに書体を替える・回転を足す
 - **音**："whoosh transition"・"impact hit"・"whip swish"
 - **props**：`scenes[]`・`starts[]`（既定 [0, 9, 22, 35…]）・`fontFamily`・`fontWeight`
+- **歌詞の文字PV（手本A・11/3）**：1語〜1音節ずつ、拍の網やなく旋律の音の頭のコマに出し、語ごとに出方を替える（打ち込み・落下・せり上がり・伸び・回して差し替え・ばらけ・横流し）。入り＝指数の ease-out（1コマで残りの約13%・中央 24コマ）・抜け＝2次の ease-in・止めの間は揺らさん・句の終わりの語はスパッ（黒の点滅・反転・グリッチ）。字体は1つ（Roboto Black Italic）・地は無彩の灰3段＋黒。写す時は字の輪郭を1コマずつ行列で当てて SVG の matrix に入れる（references/jirei_A.md）
 
 ## 08 Isometric（等角の街がせり上がる）
 - **見た目**：藤色 #c8c4fe → 桃 #f9d0cd の地に 6x6 の等角（2:1）の街・土台はこげ茶 #806667。最初はミント #a6f3e4 の平たい板、伸びると低い＝藤 #bdbaf0・高い＝桃 #f6bfae。側面に窓の点
@@ -218,6 +219,7 @@ import {W13_SplitFlap, W07_KineticType} from './waza';
 - **感性**：原色 3＋黒・落ちる順に 3 コマずつずらす。やりすぎの線＝物を 5 つ以上・弾ませすぎ
 - **音**："wood block drop"・"soft thud"・"drop bounce"
 - **props**：`colors{bg, slabTop, slabSide, black, red, blue, yellow, shadow}`
+- **2D 版（写しの実例・手本B）**：平らな切り絵（丸・半円・扇・三角・4つ星・帯）が 1〜数コマごとに組み替わる＝「平面の図形の組み替え」。場面の頭はスパッ→次のコマから差が 0.5〜0.7 倍ずつ減る ease-out で 3〜5 コマで収まる・止めは紙の粒も止める（references/jirei_B.md）
 
 ## 17 Pixel art（ドット絵のゲーム画面）
 - **見た目**：紫の空 #6b256c・上に暗い帯とディザ・黄色い夕日 #f9db92（下に横縞）・紫の山 3 重・暗い緑の地面 #1c3b29。真ん中で赤い服の子が走る・金貨 #f8c840・上に「COINS x00」（5x7 のドットの字）

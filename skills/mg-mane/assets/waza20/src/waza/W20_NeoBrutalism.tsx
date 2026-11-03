@@ -1,4 +1,4 @@
-// 20 Neo-brutalism（太い黒枠とずらした影のUI）— 手本 手本M 20：黄色の地に「CLICK ME」（桃）。札が上から落ちて、下へ行き過ぎて戻る（SHIP IT. f2→4 で +20%・f7 で止まる／98% FASTER f5→8・f12／★ f8→11・f14）。
+// 20 Neo-brutalism（太い黒枠とずらした影のUI）— 手本 tehonM 20：黄色の地に「CLICK ME」（桃）。札が上から落ちて、下へ行き過ぎて戻る（SHIP IT. f2→4 で +20%・f7 で止まる／98% FASTER f5→8・f12／★ f8→11・f14）。
 // f10〜14 で CLICK ME が下へ落ちて消え、f15 で地が桃色に・★が黄色に替わり、緑の CLICK ME が下から f15→18 で上がって止まる。下の黒い帯に SHIP IT ✦ が流れ続ける
 // CSS：黒枠 2.5u・影は 4u ずらしたぼかし無しの黒・地は点の網。落ち方は測ったコマごとの値を interpolate
 import React, {useMemo} from 'react';

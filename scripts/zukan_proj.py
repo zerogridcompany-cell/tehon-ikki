@@ -22,14 +22,16 @@ def near(x, y):   # 1字違いまで同じ語（OCR の読み違い：retter↔b
     if len(x) == len(y): return sum(p != q for p, q in zip(x, y)) <= 1
     s, l = sorted((x, y), key=len); return any(l[:i] + l[i + 1:] == s for i in range(len(l)))
 
-koe = [dict(n=norm(k["w"]), t=k["t0"]) for k in Z["oto"].get("koe_words", []) if norm(k["w"])]
+_kw = Z["oto"].get("koe_words", [])   # 声が無い手本は {"v":"なし",…}（11/02 tehonU 10秒で落ちとった）
+koe = [dict(n=norm(k["w"]), t=k["t0"]) for k in (_kw if isinstance(_kw, list) else []) if norm(k["w"])]
 DICT = set()
 if os.path.exists("/usr/share/dict/words"): DICT = {l.strip().lower() for l in open("/usr/share/dict/words")}
 caps, drop = [], []
-for x in Z["moji"]["words"]:
+_mw = (Z.get("moji") or {}).get("words", []) if isinstance(Z.get("moji"), dict) else []
+for x in (_mw if isinstance(_mw, list) else []):
     n = norm(x["w"]); t0 = x["t0"]
     koe_ok = bool(koe) and bool(n) and any(near(n, k["n"]) and abs(k["t"] - t0) <= 1.5 for k in koe)
-    # 字幕は声どおりとは限らん（mm4u：声 doesn't matter／字 not matter・声 question／字 quest）＝辞書の語で・大文字だけでなく・大きく・3回以上読めた物も字幕
+    # 字幕は声どおりとは限らん（tehonU：声 doesn't matter／字 not matter・声 question／字 quest）＝辞書の語で・大文字だけでなく・大きく・3回以上読めた物も字幕
     word = n in DICT or re.fullmatch(r"(n't|'s|'re|'ll|'ve|'m|'d)", x["w"].strip("•·. ").lower()) or (n.endswith("s") and n[:-1] in DICT)
     look_ok = bool(n) and bool(word) and not (x["w"].isupper() and len(x["w"]) > 2) and x["moji_takasa_pct"] >= 3 and (x.get("kenshutsu") or 0) >= 3
     ok = koe_ok or look_ok

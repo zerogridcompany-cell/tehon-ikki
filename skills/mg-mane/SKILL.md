@@ -6,7 +6,7 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 # MG の写し（mg-mane）
 
 🔒 2026-11-02 本人「素晴らしすぎる・めちゃ成長してる・これはモーショングラフィックスのスキルとして名前を変えて新しくしたい」。
-元＝手本X（Spotify 風 UI の AE 製 MG・1920x1080・29.97fps・12.65秒）を tehon-ikki の「構成の写し」で `run.sh ikki` 1回で写した v2（切り替え 5/5・効果音 ±30ms 29/33・ΔE 中央 0.33・-17.5 LUFS・照合の門🔴0・有料生成 0cr）→ v3 で滑らかさ 0.54→0.37・音は全部 Epidemic（references/tehonX_jirei.md）。数字と道具＝`references/tehonX_jirei.md`。
+元＝tehonX（Spotify 風 UI の AE 製 MG・1920x1080・29.97fps・12.65秒）を tehon-ikki の「構成の写し」で `run.sh ikki` 1回で写した v2（切り替え 5/5・効果音 ±30ms 29/33・ΔE 中央 0.33・-17.5 LUFS・照合の門🔴0・有料生成 0cr）→ v3 で滑らかさ 0.54→0.37・音は全部 Epidemic（references/tehonX_jirei.md）。数字と道具＝`references/tehonX_jirei.md`。
 **道具は tehon-ikki の物を呼ぶだけ（写さん）。** このスキルにあるのは入口・測る・検品の一覧だけ。
 
 - 🔒 目と耳はミリ秒：絵は1コマずつ・音は鳴り始めを `oto_ms` で。ずれは ms の数字で言う（`~/.claude/skills/tehon-ikki/references/me_mimi.md`）
@@ -29,10 +29,11 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 6. **検品は自分で**（11/1「とにかく自分で検品して」）：6コマおきの一覧を頭から終わりまで全部見て検品表 → 直したらもう一回全部（`references/kenpin.md`）
 7. **見せる前**：tehon-oracle の門（🔴0・ORACLE_OK.json）→ `kurabe` の上下比べと半透明の重ねを Finder（`open -R`）で。画面は奪わん
 8. **点は2本**：編集の一致（切り替え・字のコマ・動きの波・滑らかさ・音の ms）＝100% を狙う／素材の一致（SSIM）は追わん
+9b. **ロゴ・ブランドの印・アプリのボタンは「全く同じ」＝公式の SVG（`scripts/brand_fetch.py`＝Commons／Simple Icons／公式ページ）を Remotion で描く。画像生成で作らん（必ず形が変わる）。門＝`scripts/brand_check.py` の IoU 0.97 以上（11/3・`references/brand_assets.md`）
 9. 有料生成は要らん想定（アバター・小さい絵は Codex の GPT Image で作る・実在の人の顔は使わん）。使う時は決め.md の線（1本 20cr・合計 100cr）＋CLAUDE.md の Higgsfield と撃つ前の照合（shippai-shoumei）の決まり
 
 ## 20 の技（references/waza20.md・assets/waza20）
-🔒 11/2 本人「このそれぞれの名前も覚えて、やり方も覚えて。名前が分かればやり方も分かるようになるから…お前の感性で臨機応変に使えるように」。元＝TikTok 手本M「20 insane Claude animation styles」。
+🔒 11/2 本人「このそれぞれの名前も覚えて、やり方も覚えて。名前が分かればやり方も分かるようになるから…お前の感性で臨機応変に使えるように」。元＝TikTok @tehonM「20 insane Claude animation styles」。
 名前（英語のまま使う）：01 Particles／02 Liquid morph／03 Holographic／04 Neon glow／05 Wireframe 3D／06 Glassmorphism／07 Kinetic type／08 Isometric／09 Clay 3D／10 ASCII art／11 Gradient mesh／12 Comic book／13 Split-flap／14 Retro VHS／15 Halftone／16 Bauhaus／17 Pixel art／18 Blueprint／19 Art deco／20 Neo-brutalism
 - **いつ使う**
   - 写しで手本に同じ型がある時 → 段 0 で型を見分け（waza20.md「見分ける」）、その部品を土台にして、手本のコマ・色・大きさを測り直して合わせる。決め.md に使う技の番号を書く
@@ -62,18 +63,29 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 | 測る | 数字を手本と並べる | `$M hakaru <手本> <v2> --md 数値の照合.md` | 下の目安 |
 | 見せる | 照合の門 → 上下比べ・重ね → Finder | `oracle.py spec`/`check` → `$M kurabe <手本> <v2> mise` | 🔴0 |
 
-## A〜C で MG に効いた事（手本X）
+## A〜C で MG に効いた事（tehonX）
 - **カメラ＝紙1枚＋行列**：UI 全体を1枚の大きな紙にして、手本の隣り合うコマの相似（ORB 4000点＋RANSAC・明るい所だけ）を測り、基準のコマから積み上げる → Remotion で紙にコマごとの行列をかける。v2 でうちのブレ無しの書き出しと手本を ECC で1コマずつ合わせ、ずれを戻す（残り約1px）
 - **紙の座標で読む**：測ったカメラで全コマを1枚に重ねた絵（mosaic）と 50px の格子つきの切り出しで、部品の位置・大きさを px で読む
-- **字**：OCR を信じん（「!!」は実は「!」1つ）。字の箱は1コマずつ（明るさ>90 の画素の 0.5〜99.5%）。打ち込みは何コマ目に何字目かの表。書体は当て比べ（IoU。手本X は Arial 0.78）。図鑑の字はカメラで寄る UI の中で列が割れる（初見で字 68%・位置 42%）＝目で確かめる
+- **字**：OCR を信じん（「!!」は実は「!」1つ）。字の箱は1コマずつ（明るさ>90 の画素の 0.5〜99.5%）。打ち込みは何コマ目に何字目かの表。書体は当て比べ（IoU。tehonX は Arial 0.78）。図鑑の字はカメラで寄る UI の中で列が割れる（初見で字 68%・位置 42%）＝目で確かめる
 - **出る/消えるのコマが一番ずれる**（検品の差 15 行のうち 9 行）：events に「薄く出始め」と「濃くなり切り」の両方のコマを書く
 - **地の光**：字・UI を伏せて周りから埋めた 96x54 の色の場をコマごとに（bg_field）
 - **ブレ**：半コマで 16px 以上動く時だけ重ねる（常に重ねたら 18・24・60・144 で字が二重）。手本がブレるのは速い寄りと流しだけ
 - **粒**：手本の粒の半分から。最後の止めは粒も止める
 - **音**：置く時刻＝手本の鳴り始め（oto_ms・強さ 0.08 以上）−素材の頭の無音（素材も oto_ms で測る）。wav は ffmpeg で載せる（Remotion の Audio は +40ms 遅れた）。音量＝手本の LUFS ±0.2。決め.md の数字も段0 で測り直す（-21 と書いたが実測 -17.4）
+- **曲が Shazam で当たったら同じ曲を落としてサンプル単位で貼る**（手本A・11/3）：メルの形の相関で粗く→波形の相互相関で1サンプルまで（ずれ 0）→手本の LUFS に1つの倍率。手本の音が曲だけか＝同じ版を窓ごとに引いた残りが一様か（一様なら効果音 0 音）。字の動きは字体の輪郭を1コマずつ行列で当てて SVG の matrix に（動きの波 0.993・references/jirei_A.md）
+- **色の形式（手本B）**：Remotion の既定の書き出しは yuvj420p＋bt470bg（フルレンジ）。手本が yuv420p＋bt709 なら `--color-space=bt709 --pixel-format=yuv420p` で書き出す（同じ形でも ΔE 中央 4.38→1.38）。先に ffprobe で手本の pix_fmt・color_space を見る
+- **止めコマ（手本B）**：スマホの MG アプリ製は 18fps→20fps で 10 コマに 1 回前と同じコマ（隣との差 0.0）。動きの波で 0.0 の列を探し、Main の頭で `HOLD.has(f) ? f-1 : f`（板の区間の波 0.64→0.99）。後から OpenCV で読んで書き直すと色の行列が変わる＝Remotion の中で止める
+- **曲が不明な曲だけの手本（手本B）**：Epidemic で速さの近い曲を LQ で集め、調（chroma）と音色（mfcc）で 1 曲→曲の始まり×速さを総当たりして手本の鳴り始めに ±30ms で一番合う所→符号つきの中央だけずらす（伸ばし直して詰めると立ち上がりが変わって悪化）＝`references/jirei_B.md`
+- **白黒の 3D 風ロゴ導入（手本D・11/3）**：暗い地のグラデはコマごとの2次元3次式を当てて 160x90 の色の場に（頭で地が明るく育つのもそのまま）・上下の帯は下の端だけ測って上は対称・測り値をならすのは等速の所だけ（跳びと加速の寄りをならすと波 0.93→0.88・地の面をならすと 0.95→0.85）・3D の帯の輪は SVG の四角 72 枚を回して奥から塗る・決め.md に「1周目で v1 を先に」で係の v1 は 13分半＝`references/jirei_D.md`
+- **歌詞の文字コラージュ（手本E・11/3）**：止めコマは切り替えの直前・直後の1コマに出る（隣との差 0.5 未満で前後が動くコマを HOLD に）・粒のちらつきはコマごとの強さを解いて写す（うちに無い差を (β_f+β_{f−1})/2＝q_f の NNLS で解き feTurbulence を overlay・係数は明るさで試しの書き出しから）・写真のコラージュは鍵のコマの座標で SVG の形を並べてカメラは隣のコマの ECC を積んだ行列（別に動く物は箱の測り値で・カメラに乗せん）＝波 0.788→0.903＝`references/jirei_E.md`
+- **UI 説明 MG（手本C・11/3）**：場面の替わりの反転の点滅（明暗を 1 コマずつ入れ替え・横縞・RGB の二重）は 1 コマずつ写す（v1 は暗いだけで波 0.37→反転を入れて 0.99）。字は「語が右に足され、行が ease-out（1 コマ約 0.8 倍）で真ん中へ寄せ直る」・ぼけ→くっきり 7〜9 コマ。🔴 SVG の textLength で箱の幅に伸ばさん（字間が広がる・中身の違う名前は高さだけ合わせる）。曲が当たっても 2 か所をつないどる事がある＝区間ごとに合わせる。声が要るのに有料を使わん時は say＋DTW の timemap で語の単位に（±30ms 77→85/118）＝`references/jirei_C.md`
+- **Apple 風の UI の morph 導入（手本F・11/3）**：地の色は UI に覆われん隅 1 点で測る（6 点の中央は窓が画面を覆うと窓の色を拾う＝余計な切り替え 2・ΔE 最大 22.8）・止めの間もゆっくり寄る／引く（60 FPS の字は 714〜774 で +11.6%・札は着いた後も −0.28%/コマ＝本当に止めると区間の波 0.6 台）＝箱の幅・高さを 1 コマずつ測って鍵に（MORPHING の縦 2 倍→1 倍で 0.668→0.985）・曲の処理（籠もり・沈み・抜け）は帯ごと×0.03 秒の大きさで写す＋伏せ音は 1000Hz の純音を STFT で探して Epidemic の Test Tone で・🔴 係が回っとる間は係のファイルを触らん（親が bg.json を直したら係が原因を読み違えた）＝`references/jirei_F.md`
+- **数の積み上げのデータの図（手本G・11/3）**：数え上げの字（年・合計）は Vision OCR（`~/bin/ocr-lines`）を全コマで読んで表と式にして決め.md で係に渡す（年＝1957+floor((f+0.5)/30.5)・線＝14.45px/年＝係は 10 分で v1・v2・数字と線と衛星の出 ±0 コマ）・回る物の周期は「同じ絵に戻るコマ」で測る（面の速さ÷半径は透視で外れる＝197 と読んで本当は 216）・動きの波は場所ごとに割り（上の地球・下の地球・字・線）、数で密度が変わる物は「今の数」で大きさを変える表を手本の差の育ち方に半歩ずつ寄せる・写真なしの地球は経度ごとの濃淡の強さで回りの波を写す（0.926→0.948→0.957）・数が増えるたびの音（2 打ち 111ms）は図鑑の箱では曲の太鼓に入る＝数の増えるコマで音の帯を揃えて平均して見つける・🔴 手本の圧縮の小さな波（HEVC の 8/16 コマ）を x265 で真似ても波は下がる（0.957→0.945）＝`references/jirei_G.md`
+- **モニター撮りの手本・3D の街の飛行（手本I・11/3）**：手持ちで撮ったモニターの画面だけを毎コマ起こす（`scripts/quad_white.py`→`scripts/rectify_monitor.py`・景色を追って揺れを戻す・白い画面で4辺を直に当てる・外れ 6px 超は捨てる）→ 3D は Remotion＋three.js（場面ごとに別の原点・カメラの鍵を PCHIP・放射状ブレ・UI は 2D の層）→ カメラは `scripts/cam2d.py`（隣のコマの相似を 8 コマ表に）と `scripts/cam_cmp.py` で手本と並べて合わせる・語りは Higgsfield の elevenlabs_v4 の既定の声を f0 で選ぶ（直 API が未払いで止まった日）＝`references/jirei_I.md`
+- **語り顔のリテンション編集（手本H・11/3）**：人が正面で喋る上に語りの語を 1 語ずつ字に（白の太いサンセリフ・強調の 1 語だけ赤のセリフ斜体で 2 倍）。🔑 **字は声の後**（字−声 中央 +225ms・52 語中 51 語が後）・背景の差し替えだけ句の頭の語と同じコマ・数は回る札・question は大きい ?・つなぎの語は字にせん（語りの約 6 割だけ字）。人は代わりの素材で＝区間の頭で顔の大きさを合わせ、区間の中は**手本の背景（人の外）だけで測ったカメラ**（寄りのジャンプ ×1.21〜1.38→9〜20 コマで引く・ゆっくり寄る 0.1%/コマ）を掛け、**素材の止めコマ（24fps→30fps）はカメラごと止める**・色は区間ごとに 手本÷うち の平均 RGB（ΔE 4.06→1.48）＝`references/jirei_H.md`
 
-## 測る物と目安（`$M hakaru`・手本X v2 は「ここまで来る」の例）
-| 項目 | 物差し | 目安 🟢／🟡 | 手本X v2 |
+## 測る物と目安（`$M hakaru`・tehonX v2 は「ここまで来る」の例）
+| 項目 | 物差し | 目安 🟢／🟡 | tehonX v2 |
 |---|---|---|---|
 | 切り替え | 跳び（差が前後2コマの 1.8倍超）＋板替え（明るい画素の 8割が前と重ならん）を両方に | 全部同じコマ・余計0 | 5/5・余計 0 |
 | 動きの波 | 隣のコマとの差（480幅グレー）の相関・切り替えを抜く | 0.95／0.90 | 0.943 |
@@ -86,17 +98,23 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 - 区間ごと（既定＝手本の切り替えで割る・`--kukan "UI:0-142,入力欄:143-185,字の板:186-378"` で名前つき）に波・量・滑らかさも出る。🔴の区間は全コマの一覧で見る（`$M ken … --from 186 --to 240 --step 1 --per 8`）
 - 🔴は直す候補。v2 で直すのは検品表の行・カメラの曲線・音だけ。届かん所は 作り方.md の頭打ちの表へ（v3 は本人が言うた時だけ）
 
-## 残っとる弱みと直し方（手本X v2 から。次の MG では v1 から入れる）
+## 🔒 滑らか（11/3 朝 依頼者「カクカクしてる所がある。滑らか感は絶対に習得して。最初速くてあとゆっくりもキーフレームで設定できるから詰めて」）
+- 🔴 11/3 実測（v2・止まり＝手本は動くのにうちが止まっとるコマ・コマの差の証人つき）＝F Apple風 190・H 語り顔 74（人の動きが混ざる）・B 幾何 59・C 12・E 4・A 2・D 5・G 0・tehonN v3 22（旧の物差し）。直した後＝tehonN v4 2・B v3 2・F v3 78。hakaru の「滑らかさ（画面全体の2階差）」は全部🟢やった＝物差しが粗かった。**見せる前に `$M nameraka <手本> <うち>` を通す（止まり 0・速さの波 ≥0.95・ギザ比 ≤1.3・折れ比 ≤1.5）**
+- 原因＝動きが「手で置いた少ないキー＋線形（台形の速さ）」か「キーごとの smoothstep（折れ）」か「測った表のゆれそのまま」。手本はイージング（最初速くてあとゆっくり・バネで収まる）の**連続した曲線**。線形は始まりと止まりで速さが跳ぶ＝カクつき。隣のコマで同じ値（止めコマ）も同じ
+- 決まり＝①動く物は手本の軌跡を `kiseki.py` でサブピクセルに測り、`ease_fit.py` で区間ごとに曲線（bezier／expo／back／spring／bounce）を当てて keys.json にする（速さ v(t) の相関 ≥0.97）②Remotion は `assets/ease.ts` の `kfAt` で曲線を連続に評価（線形の表・Math.round 禁止）③止まる時はバネの尾でサブピクセルまで収まる（ピタッと 0 にせん）④速い所は `mblur`（向きつきのモーションブラー・量は手本の縁のぼけから）⑤測った表（ECC の ui/board）は曲線にするか Savitzky–Golay で滑らかに ⑥手本に止めコマ（24→30 の2回同じ等）がある時だけ同じコマに止めコマ、それ以外で dup を作らん。中身と数字＝references/nameraka.md
+- 語り顔の型（H）は人の動きが流れに混ざる＝nameraka は MG の層だけ（人を隠して）で測る（残り）
+
+## 残っとる弱みと直し方（tehonX v2 から。次の MG では v1 から入れる）
 1. **滑らかさ（UI ×2.2 のギザギザ＝「スムースさが足りない」の正体）**：原因＝カメラの寄りを ECC で1コマずつ合わせた値をそのまま使った（手本は AE のイージング）。直し＝測った道（拡大・x・y）を、動きの向きが変わるコマと止まるコマで区切り、区間ごとに3次の曲線（ベジェのイージングか平滑化スプライン）で当て直してから紙にかける。当て直した道と測った道の差は 2px 以内（超える所は区切りを足す）。ブレの長さは当て直した道の速さから出す。門＝hakaru の滑らかさの比 1.2 以下・波は v2 より下げん
 2. **効果音と曲（sfx_premium と自作のパッド＝決まり4に反する）**：手本の鳴り始めごとに役（クリック・打ち込み・ホイッシュ・インパクト）を決める → Epidemic で役の名前で探す → `epidemic_hq.py <{id: 名前}.json> <出す所>` で HQ を落とす → 置く時刻は今と同じ（鳴り始め−素材の頭）。置いた後でも `oto-bunrui/scripts/sfx_hq_swap.py` で置き方のまま差し替えられる。曲は Epidemic で近いパッド（調・速さ・手本の大きさの波）。門＝効果音 ±30ms 95%・LUFS ±0.2
 3. **字の入り（186〜198・241〜246 の区間の波 0.77〜0.78）**：1語ずつの字間とぼけの速さを目合わせした。直し＝語ごとの箱を手本から1コマずつ測り、その値で動かす
 4. **UI の速い流し（70〜84・波 0.85）**：縦の強いブレと出方の重なり。直し＝ブレの長さを手本の縦の伸びから1コマずつ測る
 
 ## ファイルの場所
-- このスキル：`scripts/mg_mane.sh`（入口：miru・kime・ikki・ken・kurabe・hakaru）・`scripts/hakaru.py`（測る）・`scripts/ken.py`（検品の一覧）・`references/kime_template.md`（決め.md の型）・`references/kenpin.md`（検品の手順）・`references/tehonX_jirei.md`（実例・道具と数字・ミス）・`references/tehonN_jirei.md`（実例2＝MOTION ショーリール・カメラの固定・出方・数字の回り）・`references/tekari.md`（金属・つやの作り方＝#chrome フィルタ）・`references/waza20.md`（20 の技の図鑑）・`assets/waza20/`（20 の技の Remotion 部品・手本の札・検品の道具・`out/All20.mp4`・`out/検品表.md`）
+- このスキル：`scripts/mg_mane.sh`（入口：miru・kime・ikki・ken・kurabe・hakaru）・`scripts/hakaru.py`（測る）・`scripts/cam2d.py`／`cam_cmp.py`（カメラの 2D の影を手本と並べる）・`scripts/quad_white.py`／`rectify_monitor.py`（モニター撮りの手本から画面だけ起こす）・`scripts/sheet.py`（コマ番号つきの一覧）・`scripts/ken.py`（検品の一覧）・`references/kime_template.md`（決め.md の型）・`references/kenpin.md`（検品の手順）・`references/tehonX_jirei.md`（実例・道具と数字・ミス）・`references/tehonN_jirei.md`（実例2＝MOTION ショーリール・カメラの固定・出方・数字の回り）・`references/jirei_B.md`（実例B＝平面の図形の組み替え・色の形式・止めコマ・曲合わせ）・`references/jirei_C.md`（実例C＝UI 説明 MG・反転の点滅・行の寄せ直し・曲のつなぎ・合成の声の合わせ方）・`references/jirei_D.md`（実例D＝白黒の 3D 風ロゴ導入・地の場・帯・ならし方）・`references/jirei_E.md`（実例E＝歌詞の文字コラージュ・切り替えの止めコマ・粒の強さ・写真を形で）・`references/jirei_F.md`（実例F＝Apple 風の UI の morph 導入・地の色の隅・止めの間の寄り・曲の帯ごとの大きさ・伏せ音）・`references/jirei_G.md`（実例G＝数の積み上げのデータの図・OCR の表・回りの周期・場所ごとの波・経度の濃淡・数ごとの音）・`references/jirei_H.md`（実例H＝語り顔のリテンション編集・言葉→字の対応表・背景で測るカメラ・止めコマ・代わりの人の色）・`references/jirei_I.md`（実例I＝モニター撮りの手本の起こし・3D の街の飛行＝three.js・cam2d/cam_cmp・Higgsfield の声の選び方）・`references/tekari.md`（金属・つやの作り方＝#chrome フィルタ）・`references/brand_assets.md`（ロゴ・印を公式の SVG で全く同じに・brand_fetch／brand_check）・`references/waza20.md`（20 の技の図鑑）・`assets/waza20/`（20 の技の Remotion 部品・手本の札・検品の道具・`out/All20.mp4`・`out/検品表.md`）
 - tehon-ikki（呼ぶだけ・写さん）：`scripts/run.sh`（miru・ikki・meshiken・guard）・`scripts/ikki_loop.sh`・`references/loop_prompt.md`・`references/miru.md`（段0 の升と道具）・`scripts/tools/oto_ms.py`
 - 照合の門：`~/.claude/skills/tehon-oracle/scripts/oracle.py`（`spec <手本>` → `check <作業>/ref/ORACLE_SPEC_vsl.json <うち>`）
-- 実例の道具と組み（型として読む）：`~/research/tehon-me/手本X/tools/`（cam_track・cam_cum・mosaic・pagewarp・gridcrop・txt_bbox・bg_field・cam_refine・cam_apply）・`proj/src/xz/XZ.tsx`
+- 実例の道具と組み（型として読む）：`~/research/tehon-me/tehonX/tools/`（cam_track・cam_cum・mosaic・pagewarp・gridcrop・txt_bbox・bg_field・cam_refine・cam_apply）・`proj/src/xz/XZ.tsx`
 
 ## 重さと片付け
 - 重い作業の前に `run.sh guard`。書き出しは `--concurrency=3`。miru は 12.65秒の手本で約1分半・hakaru は約5秒

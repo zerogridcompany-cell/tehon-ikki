@@ -81,7 +81,8 @@ log(){ echo "$(date '+%m/%d %H:%M') $*" | tee -a "$L"; }
 net_ok(){ curl -s -m 8 -o /dev/null https://api.anthropic.com/ 2>/dev/null; [ $? -ne 6 ] && [ $? -ne 7 ] && [ $? -ne 28 ]; }
 end(){ echo "$1" > "$W/IKKI_END"; log "止まる：$1 $2"; exit 0; }
 
-k=0; r=0; zero=0
+[ "$TI_CLAUDE" = off ] && { echo "🔴 Claude Code が無い（TI_CLAUDE=off）＝係を起こせん。入れてログインしてから回す（run.sh doctor）" | tee -a "$L"; echo KAKARI_OCHI > "$W/IKKI_END"; exit 1; }
+k=0; r=0; zero=0; fast=0
 read b g0 why < <(score "$W"); log "始め 点 ${b}（${why}）"
 [ "$g0" = 1 ] && { printf 'ゴール到達（始めた時にもう届いとった）\n%s\n' "$why" > "$W/DONE"; end GOAL "$why"; }
 while true; do
@@ -92,11 +93,19 @@ while true; do
     # ネットが切れとる間は回数に数えず待つ（10/25〜26 に ENOTFOUND で20回落ちて2回止まった→依頼者「ネットで止まらんように」）
     until net_ok; do log "ネットに届かん（api.anthropic.com）＝数えずに待つ"; sleep 120; done
     k=$((k+1)); log "係を起こす（$k/$MAX_RESTART 回目）"
-    n0=$(wc -c < "$W/run.log" 2>/dev/null || echo 0)
+    n0=$(wc -c < "$W/run.log" 2>/dev/null || echo 0); t0=$(date +%s)
     (cd "$W" && nice -n 5 "$TI_CLAUDE" --model "$(cat "$W/model.txt" 2>/dev/null || echo "$TI_LOOP_MODEL")" -p "$(prompt "$W")" --dangerously-skip-permissions --output-format stream-json --verbose >> "$W/run.log" 2>&1)
     # 係がすぐ落ちて、落ちた理由がネット（ENOTFOUND・Can't reach the API server・ECONNRESET・ETIMEDOUT）なら、その回は数えん
     if tail -c +$((n0+1)) "$W/run.log" | grep -qE "ENOTFOUND|Can't reach the API server|ECONNRESET|ETIMEDOUT|EAI_AGAIN" && ! [ -f "$W/DONE" ]; then
       k=$((k-1)); log "係がネットの理由で落ちた＝回数に数えん（$k/$MAX_RESTART）"; sleep 120; continue
+    fi
+    # 🆕11/02 係がすぐ落ちる（ログインしてない・鍵が無い・モデル名が違う）のを20回くり返して何も出さん、を止める
+    if [ $(( $(date +%s) - t0 )) -lt 90 ] && ! [ -f "$W/DONE" ]; then fast=$((fast+1)); else fast=0; fi
+    if [ $fast -ge 3 ]; then
+      log "🔴 係が3回続けて90秒未満で落ちた＝Claude Code が動いとらん。run.log の最後："
+      tail -c +$((n0+1)) "$W/run.log" | tail -8 | tee -a "$L"
+      log "   直し方：ターミナルで claude を1回開いてログイン（/login）・モデル（$TI_LOOP_MODEL・作業/model.txt）が使えるか確かめてから run.sh loop $W"
+      end KAKARI_OCHI "係が起きん"
     fi
     read a ga why < <(score "$W")
     if [ "$ga" = 1 ]; then printf 'ゴール到達\n%s\n' "$why" > "$W/DONE.tmp"; [ -f "$W/DONE" ] && sed 1d "$W/DONE" >> "$W/DONE.tmp"; mv "$W/DONE.tmp" "$W/DONE"; end GOAL "$why"; fi

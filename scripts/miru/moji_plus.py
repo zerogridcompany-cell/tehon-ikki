@@ -1,4 +1,4 @@
-"""段0 見るの足し（11/2 手本J で見えてなかった字の4つ）：zukan.json に足す
+"""段0 見るの足し（11/2 tehonJ で見えてなかった字の4つ）：zukan.json に足す
   moji_track＝同じ所に続けて読めた語を1本の字にまとめる（読み違い SANDY/COY も BODY と同じ場所・同じ間なら1本）
   ・tenmetsu＝字が出とる間に消えるコマ（字の箱の輪郭の形を1コマずつ字の見本と比べる＝反転しても輪郭は同じ）
   ・atsumi＝字に厚み・影（字の輪郭を少しずらした所に、もう1本の輪郭がそろって出る）
@@ -56,7 +56,7 @@ for t in tr:
     A, B = max(0, t['f0'] - 10), min(N - 1, t['f1'] + 10); sc = {}
     for f in range(A, B + 1): sc[f] = ncc(edge(g[f, y0:y1, x0:x1]), T)
     core = [sc[f] for f in range(t['f0'], t['f1'] + 1)]; hi = float(np.percentile(core, 75))
-    th = max(0.15, 0.2 * hi); on = {f for f in sc if sc[f] >= th}   # 消えたコマは 0 前後・出とるコマは寄り・揺れ・反転でも 0.2 以上（手本J 11/2）
+    th = max(0.15, 0.2 * hi); on = {f for f in sc if sc[f] >= th}   # 消えたコマは 0 前後・出とるコマは寄り・揺れ・反転でも 0.2 以上（tehonJ 11/2）
     for f in sorted(sc):   # 隣の出とるコマとよく似とる＝出とる（ゆっくり変わる字を落とさん）
         if f not in on and (f - 1) in on and ncc(edge(g[f, y0:y1, x0:x1]), edge(g[f - 1, y0:y1, x0:x1])) >= 0.75 and sc[f] >= 0.6 * th: on.add(f)
     seq = sorted(on)
@@ -99,7 +99,7 @@ for t in tr:
                 ov = float(Mi.sum() / max(1, inb.sum())); din = float(I[Mi].mean()) if Mi.sum() else 0; dout = float(I[Mo].mean()) if Mo.sum() else 0
                 ushi = dict(kasanari=round(ov, 3), sumi_naka=round(din, 3), sumi_soto=round(dout, 3), hi=round(din / max(1e-3, dout), 2))
     out.append(dict(w=b['w'], f0=int(r0), f1=int(r1), box_px=t['box'], kesu=kesu, mihon=fm, atsumi=atsu, ushiro=ushi,
-                    mieta1=int(max(w.get('mieta1', w['f1']) for w in t['ws'])),   # Vision がこの字を最後に読めたコマ（11/2 手本X：点滅＝その後また見えた時だけ）
+                    mieta1=int(max(w.get('mieta1', w['f1']) for w in t['ws'])),   # Vision がこの字を最後に読めたコマ（11/2 tehonX：点滅＝その後また見えた時だけ）
                     yomi=sorted({w['w'] for w in t['ws']})[:6]))
 for o in out:
     a = o['atsumi']; o['atsumi_ari'] = bool(a['hi'] >= 2.2 and a['peak'] >= 0.12)
@@ -119,8 +119,8 @@ def same_pic(f, moji_ok=True):
         c2 = cv2.resize(g[min(N - 1, f + 2)], a.shape[::-1], interpolation=cv2.INTER_AREA).astype(np.float32)
         u = a - a.mean(); v = c2 - c2.mean(); r2_ = float((u * v).sum() / (np.sqrt((u * u).sum() * (v * v).sum()) + 1e-6))
         if abs(r2_) >= 0.6: return 'hanten'
-    # 🔒11/2 手本X：点滅＝「消えてまた出る」＝その字を Vision が f より後にも読めた時だけ（mieta1 ≥ f）。字の列は輪郭の相関 0.15 で別の字（In real-time）の上まで伸びる＝「And react」が 266 の板替えで消えた所を点滅と見てカットを消した
-    same_word = any(o['f0'] < f <= o['f1'] and o.get('mieta1', o['f1']) >= f and (f in o['kesu'] or (f - 1) in o['kesu']) for o in out)   # 同じ字が消えてまた出る所だけ（字が別の字に替わる板の切り替え＝手本R は切り替えのまま）
+    # 🔒11/2 tehonX：点滅＝「消えてまた出る」＝その字を Vision が f より後にも読めた時だけ（mieta1 ≥ f）。字の列は輪郭の相関 0.15 で別の字（In real-time）の上まで伸びる＝「And react」が 266 の板替えで消えた所を点滅と見てカットを消した
+    same_word = any(o['f0'] < f <= o['f1'] and o.get('mieta1', o['f1']) >= f and (f in o['kesu'] or (f - 1) in o['kesu']) for o in out)   # 同じ字が消えてまた出る所だけ（字が別の字に替わる板の切り替え＝tehonR は切り替えのまま）
     if moji_ok and txt and same_word and m.mean() >= 0.15:
         if r(m) >= 0.9 or float(np.abs(a[m] - b[m]).mean()) < 5: return 'tenmetsu'
     return None

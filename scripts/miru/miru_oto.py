@@ -12,9 +12,11 @@ import numpy as np, librosa, soundfile as sf
 HERE = os.path.dirname(os.path.abspath(__file__)); SK = os.path.join(HERE, "..")
 REF = os.path.abspath(sys.argv[1]); W_ = os.path.abspath(sys.argv[2]); O = f"{W_}/zukan/oto"; P = f"{W_}/zukan/parts"; os.makedirs(O, exist_ok=True)
 PY = sys.executable
-HAKO = os.path.expanduser("~/.claude/skills/oto-bunrui/scripts/hako.py")
+HAKO = os.path.join(HERE, "hako.py")   # 🆕11/02 同梱（前は作者の Mac の ~/.claude/skills/oto-bunrui を見とった＝他の人の Mac では段0 の音で落ちて何も出んかった）
 SHZ = os.path.join(SK, "kouzou", "shazam_undo.py")
-MODEL = os.path.expanduser("~/Library/Caches/whisper-cpp/ggml-large-v3-turbo.bin")
+MODEL = os.path.expanduser(os.environ.get("TI_WHISPER_MODEL") or "~/Library/Caches/whisper-cpp/ggml-large-v3-turbo.bin")
+import shutil
+WHISPER = os.environ.get("TI_WHISPER") or shutil.which("whisper-cli")
 out = {}
 # 🔴 長さは絵の長さ（51 は音が 187秒・絵が 93.8秒＝音の後ろ半分は絵に無い）
 dur = json.load(open(f"{P}/kihon.json"))["dur"] if os.path.exists(f"{P}/kihon.json") else \
@@ -36,12 +38,15 @@ out["ongaku_hako"] = hk.get("2 音楽", {})
 
 # ── 2 声の1語ずつ ──
 words = []
-if koe_s >= 1.0 and os.path.exists(MODEL):
+if koe_s >= 1.0 and not (WHISPER and os.path.exists(MODEL)):
+    _m = f"whisper-cli か型（{MODEL}）が無い＝声の1語ずつの時刻を飛ばした"; print("🟡", _m)
+    if os.environ.get("TI_SKIP_LOG"): open(os.environ["TI_SKIP_LOG"], "a").write(f"⏭️ 飛ばした：声の1語ずつ（理由：{_m}）\n")
+if koe_s >= 1.0 and WHISPER and os.path.exists(MODEL):
     v16 = f"{O}/koe16k.wav"
     if not os.path.exists(v16):
         subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", f"{sep}/vocals.wav", "-ac", "1", "-ar", "16000", v16], check=True)
     if not os.path.exists(f"{O}/koe_words.json"):
-        subprocess.run(["whisper-cli", "-m", MODEL, "-f", v16, "-l", "auto", "-ml", "1", "-sow", "-oj", "-np", "-of", f"{O}/koe_words"], check=True,
+        subprocess.run([WHISPER, "-m", MODEL, "-f", v16, "-l", "auto", "-ml", "1", "-sow", "-ojf", "-np", "-of", f"{O}/koe_words"], check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     J = json.load(open(f"{O}/koe_words.json"))
     for s in J.get("transcription", []):
@@ -50,8 +55,13 @@ if koe_s >= 1.0 and os.path.exists(MODEL):
         if s["offsets"]["from"] / 1000 >= dur: continue
         words.append(dict(w=t, t0=round(s["offsets"]["from"] / 1000, 3), t1=round(s["offsets"]["to"] / 1000, 3)))
 # 語りか歌か：1秒あたりの語が 1 未満なら歌の声（51：声の層 107秒に 14語＝0.13・r2：66秒に 249語＝3.8）
-out["koe_shurui"] = dict(v="語り" if koe_s and len(words) / max(koe_s, 1e-3) >= 1.0 else ("歌・声ネタ（語りなし）" if koe_s >= 1.0 else "声なし"),
-                         go_per_byou=round(len(words) / max(koe_s, 1e-3), 2), koe_byou=round(koe_s, 1))
+_ps = [tk.get("p") for s in (J.get("transcription", []) if isinstance(globals().get("J"), dict) else []) for tk in s.get("tokens", []) if tk.get("p") is not None and not tk.get("text", "").startswith("[")]
+p_mean = round(float(np.mean(_ps)), 3) if _ps else None
+# 🔒11/2 手本N：音の設計だけの手本に whisper が歌詞を作って「語り」になった → トークンの確かさ p の平均 0.9 未満か 12 語未満は語りと見ん
+katari_ok = bool(koe_s and len(words) / max(koe_s, 1e-3) >= 1.0 and (p_mean is None or (p_mean >= 0.9 and len(words) >= 12)))
+out["koe_shurui"] = dict(v="語り" if katari_ok else ("歌・声ネタ（語りなし）" if koe_s >= 1.0 else "声なし"),
+                         go_per_byou=round(len(words) / max(koe_s, 1e-3), 2), koe_byou=round(koe_s, 1), whisper_p=p_mean, go=len(words),
+                         rule="語り＝1秒に1語以上・whisper のトークンの確かさ平均 0.9 以上・12語以上")
 out["koe_words"] = words if words else {"v": "なし", "konkyo": f"声の箱 {koe_s:.1f}秒（1秒未満は声なし）"}
 
 # ── 3 強い低音（30〜150Hz の立ち上がり）──
@@ -138,7 +148,7 @@ for x in secs:
         x["key"] = hits[0].get("key")
     else:
         x["fumei"] = True; x["konkyo"] = dict(shazam=0, madoi=sum(1 for w0 in win if x["a"] <= w0 + 4 < x["b"]), note="Shazam が黙った＝曲は不明（kouzou の bgm_fp で元の曲から探す）")
-# 同じ曲・同じ速さ（skew の差 2% 未満）の隣どうしは1つに（10/30 mm4u：Flashing Lights 1曲を 161/112/92/136/89 の5つに割っとった＝速さの揺れは曲の中の揺れ）
+# 同じ曲・同じ速さ（skew の差 2% 未満）の隣どうしは1つに（10/30 tehonU：Flashing Lights 1曲を 161/112/92/136/89 の5つに割っとった＝速さの揺れは曲の中の揺れ）
 mg_ = []
 for x in secs:
     p_ = mg_[-1] if mg_ else None

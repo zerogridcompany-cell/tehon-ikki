@@ -65,7 +65,7 @@ with open(f"{G}/plates.tsv", "w") as fo:
 open(f"{G}/run_codex.sh", "w").write(f"""#!/bin/bash
 # Codex で一枚絵を 3本ずつ。🔴 `--full-auto` は無い・`-i` は後ろの文を食う＝付けん・ffmpeg は -nostdin
 G={os.path.abspath(G)}
-one(){{ d=$G/$1; [ -s $d/plate.png ] && {{ echo "$1 skip"; return; }}; cd $d && ${{TI_CODEX:-codex}} exec --skip-git-repo-check -c 'mcp_servers={{}}' -s workspace-write "task.md を読んで、その通りに画像を1枚生成して plate.png に保存して。参照画像は ref.png。" < /dev/null > codex.log 2>&1; [ -s $d/plate.png ] && echo "$1 OK" || echo "$1 NG"; }}
+one(){{ d=$G/$1; [ -s $d/plate.png ] && {{ echo "$1 skip"; return; }}; cd $d && codex exec --skip-git-repo-check -c 'mcp_servers={{}}' -s workspace-write "task.md を読んで、その通りに画像を1枚生成して plate.png に保存して。参照画像は ref.png。" < /dev/null > codex.log 2>&1; [ -s $d/plate.png ] && echo "$1 OK" || echo "$1 NG"; }}
 export -f one; export G
 cut -f1 $G/plates.tsv | xargs -P 6 -I{{}} bash -c 'one {{}}'
 echo ALLDONE

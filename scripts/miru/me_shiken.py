@@ -1,13 +1,13 @@
 # 目の試験：1回目に見た物（zukan.json）を、何周も詰めて分かった答え（seikai.json）と照らして「最初に見えた割合」を出す
 # 使い方：python3 me_shiken.py <zukan.json> <seikai.json> [結果.json]
-#   答えの作り方＝写しを詰め切った作業から（例＝作業フォルダの me_shiken/seikai.json）。道具を直すたびに測り直して点を上げる
+#   答えの作り方＝写しを詰め切った作業から（tehonR＝~/research/zerogrid-edit2-20261031/me_shiken/seikai.json）。道具を直すたびに測り直して点を上げる
 import json, re, sys
 import numpy as np
 Z = json.load(open(sys.argv[1])); S = json.load(open(sys.argv[2])); rows = []
 def add(name, score, mita, kotae): rows.append(dict(k=name, score=round(float(score), 3), mita=mita, kotae=kotae))
 cuts = Z.get('cuts', []); f0s = [b['f'] for b in Z['ban']] if Z.get('ban') else [c['f0'] for c in cuts[1:]]
 NASHI = dict(S.get('nashi', {}))
-if not isinstance(S.get('kirikae'), list):   # 🆕10/31 型を問わん答え（51・mm4u・r2）＝me_shiken_ippan.py で採点
+if not isinstance(S.get('kirikae'), list):   # 🆕10/31 型を問わん答え（51・tehonU・r2）＝me_shiken_ippan.py で採点
     sys.path.insert(0, __import__('os').path.dirname(__import__('os').path.abspath(__file__)))
     import me_shiken_ippan; me_shiken_ippan.saiten(Z, S, add, NASHI); rows_done = True
 else: rows_done = False
@@ -15,7 +15,7 @@ KW = set()
 if not rows_done:
   for sp in S['kawaru'].values():
     for e0, e1, r in sp[1:]: KW |= {e0 - 1, e0, e0 + 1}
-def ban_shiken():
+def tehonR():
     global hit, tot, hit9
     # 1 板の切り替え（±1コマ）
     ev = S['kirikae']; hit = sum(any(abs(e - f) <= 1 for f in f0s) for e in ev); extra = sum(not any(abs(e - f) <= 1 for e in ev) and f not in KW for f in f0s); naka = sum(not any(abs(e - f) <= 1 for e in ev) and f in KW for f in f0s)
@@ -75,7 +75,7 @@ def ban_shiken():
     lu = Z.get('oto', {}).get('lufs', {}).get('I')
     add('音量（LUFS）', 1 if lu is not None and abs(lu - S['lufs']) <= 0.5 else 0, str(lu), str(S['lufs']))
 
-if not rows_done: ban_shiken()
+if not rows_done: tehonR()
 tot_sc = np.mean([r['score'] for r in rows])
 print(f'目の試験：最初に見えた割合 {tot_sc * 100:.0f}%（{len(rows)}項目）')
 for k, v in NASHI.items(): print(f'  ー {k}：答えなし（{v}）')

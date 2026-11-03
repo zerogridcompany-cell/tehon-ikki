@@ -56,7 +56,7 @@ for f in sorted(obs):
         for t in active:
             if f - t["last"] > 3 * A.step: continue
             io = iou(t["b"], o["b"]); sim = difflib.SequenceMatcher(None, norm(t["w"]), norm(o["w"])).ratio()
-            # 🔒11/2 手本X（字 68%・位置 42%）：カメラで寄る UI の字は箱が動いて IoU が落ち、同じ語が 4〜5 本の列に割れた（Podcasts 10-14／20-41／49-60／61-62）
+            # 🔒11/2 tehonX（字 68%・位置 42%）：カメラで寄る UI の字は箱が動いて IoU が落ち、同じ語が 4〜5 本の列に割れた（Podcasts 10-14／20-41／49-60／61-62）
             #   → 動きを許す：①前の2つの観測から次の箱を予測した IoU ②中心のずれが字の高さの 1.5倍以内・大きさ 0.7〜1.4倍・字が 0.6 以上似とる
             pb = t.get("pb"); iop = iou(pb, o["b"]) if pb else 0.0
             h_ = max(1, t["b"][3] - t["b"][1]); cx, cy = (t["b"][0] + t["b"][2]) / 2, (t["b"][1] + t["b"][3]) / 2; ox, oy = (o["b"][0] + o["b"][2]) / 2, (o["b"][1] + o["b"][3]) / 2
@@ -100,9 +100,9 @@ def refine(t):
         if win.shape[0] < tpl.shape[0] or win.shape[1] < tpl.shape[1]: sc.append(0.0); en.append(0.0); continue
         sc.append(float(cv2.matchTemplate(win, tpl, cv2.TM_CCOEFF_NORMED).max())); en.append(float((win >= thr).sum()))   # en＝はっきり白い画素の数（薄く出とる途中は少ない）
     sc = np.array(sc); en = np.array(en); pk = fr.index(pk_f)
-    # 🔒11/2 手本S（初見 字の出る・消える 1/14）：相関は明るさの倍率に強い＝薄く出始めた・消えかけのコマまで「出とる」と見て、出るが 4コマ早く・消えるが 5コマ遅かった（12本全部）
+    # 🔒11/2 tehonS（初見 字の出る・消える 1/14）：相関は明るさの倍率に強い＝薄く出始めた・消えかけのコマまで「出とる」と見て、出るが 4コマ早く・消えるが 5コマ遅かった（12本全部）
     #   → 「はっきり白い画素の数が、落ち着いた量の半分以上」のコマだけ出とる（答えの作り方「白い画素が落ち着いた量の半分以上」と同じ物差し。線の量の平均やと薄い途中を数えてまだ 2コマ早かった）
-    # 🔒11/2（2回目）：出る・消えるは2つの物差しで出す。f0/f1＝「見え始め〜見え終わり」（相関 60%・前と同じ。r2・51・手本J の答えはこれ）／f0_koi/f1_koi＝「はっきり見える」（はっきり白い画素の数が落ち着いた量の半分以上。手本S の答え・人が「出た」と見る所）
+    # 🔒11/2（2回目）：出る・消えるは2つの物差しで出す。f0/f1＝「見え始め〜見え終わり」（相関 60%・前と同じ。r2・51・tehonJ の答えはこれ）／f0_koi/f1_koi＝「はっきり見える」（はっきり白い画素の数が落ち着いた量の半分以上。tehonS の答え・人が「出た」と見る所）
     #   はっきりの方だけにすると、字が小さく出て大きくなる・縁取りの字（r2 の buy 48→58・51 の句が 1〜3コマ遅れ）で見え始めを落とす＝両方を持ち、採点はどちらかが ±1 で当たり
     def hani(on, force=False):
         on = on.copy()
@@ -123,6 +123,9 @@ def refine(t):
     if seen0 < f0k and en[fr.index(seen0)] >= 0.5 * plat: f0k = seen0
     if seen1 > f1k and en[fr.index(seen1)] >= 0.5 * plat: f1k = seen1
     f0k, f1k = max(f0k, f0_), min(f1k, f1_)
+    # 🔒11/2 tehonN：字が1字ずつ落ちて増える（MO→MOT→MOTI→MOTION）と列は最初の読みから始まる（34）が、人が「MOTION が出た」と見るのは全部そろった 50〜52＝はっきりの始まりは「最後の読みが初めて読めたコマ」以降
+    full0 = min(s[0] for s in cands)
+    if full0 > f0k and norm(t["seen"][0][1]["w"]) != top: f0k = min(full0, f1k)
     return dict(f0=f0_, f1=f1_, f0_koi=f0k, f1_koi=f1k, mieta0=seen0, mieta1=seen1, peak=pk_f, ocr_box=pk_o["b"], w=pk_o["w"], score=round(float(sc.max()), 3),
                 edge=(i0 == 0, i1 == len(fr) - 1), sc=sc)
 
@@ -192,12 +195,12 @@ for t in tracks:
                       box_px=ib, box_pct=[round(100 * ib[0] / WW, 2), round(100 * ib[1] / HH, 2), round(100 * (ib[2] - ib[0]) / WW, 2), round(100 * (ib[3] - ib[1]) / HH, 2)],
                       moji_takasa_pct=round(100 * (ib[3] - ib[1]) / HH, 2), ocr_box_px=[int(v * K) for v in r["ocr_box"]],
                       score=r["score"], kenshutsu=len(t["seen"]), **{k: v for k, v in stl.items() if k != "ink_box"}))
-# 🔒11/2 手本S：同じ字が同じ場所で続いとるのに、Vision の読みが揺れる（もし365日→もし、5日）・数コマ読み落とすと列が切れ、題 138〜1641 が 131-388／382-1076／1068-1168／1154-1646 の4本になった
-#   → 同じ字（0.8 以上似とる）・同じ箱（IoU≥0.5）で、コマが重なる（か1コマ以内で続く）列は1本につなぐ。間が空いた物はつながん（手本J の点滅＝消えてまた出るは別の列のまま）
+# 🔒11/2 tehonS：同じ字が同じ場所で続いとるのに、Vision の読みが揺れる（もし365日→もし、5日）・数コマ読み落とすと列が切れ、題 138〜1641 が 131-388／382-1076／1068-1168／1154-1646 の4本になった
+#   → 同じ字（0.8 以上似とる）・同じ箱（IoU≥0.5）で、コマが重なる（か1コマ以内で続く）列は1本につなぐ。間が空いた物はつながん（tehonJ の点滅＝消えてまた出るは別の列のまま）
 words.sort(key=lambda x: (x["f0"], x["box_px"][1], x["box_px"][0])); stitched = []
 for x in words:
-    m = next((y for y in reversed(stitched) if x["f0"] <= y["f1"] + 1 and x["mieta0"] - y["mieta1"] <= 12 and iou(y["box_px"], x["box_px"]) >= 0.5
-              and difflib.SequenceMatcher(None, norm(y["w"]), norm(x["w"])).ratio() >= 0.8), None)   # Vision が読めたコマも 12コマ（0.4秒）以内で続く物だけ＝次の板の同じ語（r2）はつながん
+    m = next((y for y in reversed(stitched) if ((x["f0"] <= y["f1"] + 1 and x["mieta0"] - y["mieta1"] <= 12) or (0 <= x["mieta0"] - y["mieta1"] <= 60 and iou(y["box_px"], x["box_px"]) >= 0.3 and norm(y["w"]) == norm(x["w"])))
+              and iou(y["box_px"], x["box_px"]) >= 0.3 and difflib.SequenceMatcher(None, norm(y["w"]), norm(x["w"])).ratio() >= 0.8), None)   # 🔒11/2 tehonN：同じ字が同じ箱（IoU≥0.7）に 60コマ（1秒）以内で戻る時もつなぐ（カメラのブレで Vision が読めん間）   # Vision が読めたコマも 12コマ（0.4秒）以内で続く物だけ＝次の板の同じ語（r2）はつながん
     if m is None: stitched.append(x); continue
     f0_, f1_ = min(m["f0"], x["f0"]), max(m["f1"], x["f1"]); k0_, k1_ = min(m["f0_koi"], x["f0_koi"]), max(m["f1_koi"], x["f1_koi"])
     s0_, s1_ = min(m["mieta0"], x["mieta0"]), max(m["mieta1"], x["mieta1"]); n_ = m["kenshutsu"] + x["kenshutsu"]; k_ = m.get("tsunagi", 0) + 1

@@ -33,12 +33,12 @@ Z['ugoku_koma'] = [int(k + 1) for k in np.where(d > 0.15)[0] if (k + 1) not in n
 from oto_ms import tachiagari
 y = np.frombuffer(subprocess.run(['ffmpeg', '-v', 'error', '-i', REF, '-ac', '1', '-ar', '44100', '-f', 'f32le', '-'], capture_output=True).stdout, np.float32)
 T = np.array([x['t'] for x in tachiagari(y, 44100, band=(30, 150))]); av = []
-# 🔒11/2 手本S（初見 ms 10%）：どの「絵の変わり目」で測るかを手本の種類で決める
+# 🔒11/2 tehonS（初見 ms 10%）：どの「絵の変わり目」で測るかを手本の種類で決める
 #   本物の動画の場面がある手本（実写・3D）＝カット（hard/dissolve）で測る。板の切り替え（ban）には字の出入り・ハエ・題の動きが混ざり、音の無い変わり目まで数えて 12.9ms（答え 31.0）になった。カット 12 本なら 36.2ms
-#   止め絵だけの手本（MG・手本R）＝板の切り替えで測る（MG は板の動き1つ1つに音が付く。板 83 で 22.5＝答え 22.9）
+#   止め絵だけの手本（MG・tehonR）＝板の切り替えで測る（MG は板の動き1つ1つに音が付く。板 83 で 22.5＝答え 22.9）
 CUTS = [c['f0'] for c in Z.get('cuts', []) if c.get('kirikae', {}).get('kind') not in (None, '頭')]
 honmono = sum(1 for c in Z.get('cuts', []) if c.get('seishi', {}).get('kind') == '本物の動画')
-#   🔒11/2（2回目）：「1つでも本物の動画」やと MG の板1枚の見間違いで切り替わる（手本R v7：11 カット中 1 が本物の動画と出て ms 22.5→34.7）→ カットの 1/4 以上が本物の動画の時だけ（手本S 10/13・mm4u 23/24・r2 125/213・手本J 27/68・51 41/134＝31%）
+#   🔒11/2（2回目）：「1つでも本物の動画」やと MG の板1枚の見間違いで切り替わる（tehonR v7：11 カット中 1 が本物の動画と出て ms 22.5→34.7）→ カットの 1/4 以上が本物の動画の時だけ（tehonS 10/13・tehonU 23/24・r2 125/213・tehonJ 27/68・51 41/134＝31%）
 EV, de = (CUTS, 'カット（本物の動画の場面が 1/4 以上の手本）') if len(CUTS) >= 3 and honmono >= 0.25 * len(CUTS) else (BF, '板の切り替え（止め絵が主の手本＝MG）')
 for f in EV:
     if not len(T): break

@@ -19,11 +19,15 @@ have node && row ✅ Node "$(node -v)" || row 🔴 Node 無し "brew install nod
 if [ -n "$TI_NODE_MODULES" ]; then
   [ -d "$TI_NODE_MODULES/remotion" ] && row ✅ Remotion "$TI_NODE_MODULES" || row 🔴 Remotion "TI_NODE_MODULES=$TI_NODE_MODULES に remotion が無い" "設定の TI_NODE_MODULES を消すと作業フォルダで npm install する"
 else row ✅ Remotion "作業フォルダの proj で npm install（init の時・初回だけ数分）"; fi
-[ "$TI_CLAUDE" != off ] && row ✅ "Claude Code" "${TI_CLAUDE}（回し役のモデル ${TI_LOOP_MODEL}）" || row 🔴 "Claude Code" 無し "run.sh ikki の回し役に要る"
+[ "$TI_CLAUDE" != off ] && row ✅ "Claude Code" "${TI_CLAUDE}（回し役のモデル ${TI_LOOP_MODEL}・ログインしてない時は ikki が KAKARI_OCHI で止まる）" || row 🔴 "Claude Code" "無し＝run.sh ikki の回し役が動かん（1本目 v1 だけは出す）" "npm i -g @anthropic-ai/claude-code → claude を1回開いてログイン"
 echo "■ 無くても回る（その段は飛ばして記録に残す）"
 have yt-dlp && row ✅ yt-dlp ok || row 🟡 yt-dlp "無い＝曲の決め直し・サムネの元動画を飛ばす" "brew install yt-dlp"
-have demucs && row ✅ demucs ok || row 🟡 demucs "無い＝声と曲の分け方が粗くなる" "pip install demucs"
-have whisper-cli && row ✅ whisper-cli ok || row 🟡 whisper-cli "無い＝言葉の時刻を飛ばす" "brew install whisper-cpp"
+"$TI_PY" -c "import demucs" 2>/dev/null && row ✅ demucs ok || row 🟡 demucs "無い＝声と曲を粗く分ける（声の1語ずつの時刻も取れん）" "$TI_PY -m pip install demucs"
+"$TI_PY" -c "import matplotlib" 2>/dev/null && row ✅ matplotlib ok || row 🟡 matplotlib "無い＝音の譜面の絵（hako.png）を飛ばす" "$TI_PY -m pip install matplotlib"
+WM="${TI_WHISPER_MODEL:-$HOME/Library/Caches/whisper-cpp/ggml-large-v3-turbo.bin}"
+if have whisper-cli && [ -s "$WM" ]; then row ✅ whisper-cli "ok（型 $WM）"
+elif have whisper-cli; then row 🟡 whisper-cli "型が無い（$WM）＝言葉の時刻を飛ばす" "mkdir -p ~/Library/Caches/whisper-cpp && curl -L -o $WM https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin（約1.6GB・置き場は設定の TI_WHISPER_MODEL）"
+else row 🟡 whisper-cli "無い＝言葉の時刻を飛ばす" "brew install whisper-cpp（型も要る＝もう一度 doctor で出る）"; fi
 "$TI_PY" -c "import shazamio" 2>/dev/null && row ✅ shazamio ok || row 🟡 shazamio "無い＝曲の名前当てを飛ばす" "$TI_PY -m pip install shazamio"
 "$TI_PY" -c "import mediapipe" 2>/dev/null && row ✅ mediapipe ok || row 🟡 mediapipe "無い＝顔の測りを飛ばす" "$TI_PY -m pip install mediapipe"
 [ "$TI_CODEX" != off ] && row ✅ Codex "$TI_CODEX" || row 🟡 Codex "off＝カットの目・一枚絵を飛ばす（点は下がる）" "npm i -g @openai/codex して codex login"

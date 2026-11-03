@@ -1,4 +1,4 @@
-// 14 Retro VHS（80年代のビデオ）— 手本 手本M 14：夕日（上は珊瑚・下半分に黄色の横縞）・紫の山の影・桃色の床に手前へ流れる方眼。
+// 14 Retro VHS（80年代のビデオ）— 手本 tehonM 14：夕日（上は珊瑚・下半分に黄色の横縞）・紫の山の影・桃色の床に手前へ流れる方眼。
 // 画面の字＝PLAY ▶（左上）・● REC（右上・16コマ点いて8コマ消える）・SP 0:04:12（左下・25コマで1秒進む）。f0〜2 は横に裂けるノイズ・下の端にトラッキングの砂嵐・走査線・色ずれ
 // SVG で景色＋SVG フィルタ（feTurbulence＋feDisplacementMap で横ずれ／赤だけずらす色ずれ）＋CSS の走査線＋canvas の砂嵐
 import React, {useLayoutEffect, useRef} from 'react';

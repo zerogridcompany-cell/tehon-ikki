@@ -1,5 +1,5 @@
 # 段0 見るの足し（10/31 目の問題集）：曲の名前を「当たった作者の他の曲も全部比べて」決め直す＋声が曲の声か語りかを曲と比べて分ける
-#  🔴 Shazam は同じ作者の同じ太鼓・同じ速さの別の曲を返す（手本R・r2 とも TREAT ME TEKK＝本当は SCREAMTEKK）
+#  🔴 Shazam は同じ作者の同じ太鼓・同じ速さの別の曲を返す（tehonR・r2 とも TREAT ME TEKK＝本当は SCREAMTEKK）
 #  ① 区間ごとに Shazam の作者の曲を YouTube から 20本ほど落とす（cand/・使い回す）→ 自前の指紋（bgm_fp の hashes）で区間の音楽の層と照らす
 #     一番当たった曲が Shazam の曲の 2倍以上・当たり 60 以上なら名前を替える（根拠 fp_hits を残す）
 #  ② 声の層（demucs vocals）を、当たった曲の同じ位置と 300〜3400Hz のメルの形で比べる＝似とる（相関 0.35 以上）の声が 6割超なら「歌・声ネタ（語りなし）」
@@ -94,7 +94,7 @@ for s in secs:
     else:
         s['cand_id'] = (same[0][1] if same else top[1]) if top[0] >= 30 else None; s['at0_fp'] = (same[0][2] if same else top[2]) if s['cand_id'] else None
         log.append(f'{s["a"]}-{s["b"]}秒：{s["name"]} のまま（一番 {meta[top[1]]["title"][:30]} {top[0]}・Shazam の曲 {shz_hits}）')
-# 不明の区間：隣の区間で落とした曲（全部）と照らす＝同じ曲が続いとるだけの事が多い（手本R 0〜3秒＝SCREAMTEKK の頭）
+# 不明の区間：隣の区間で落とした曲（全部）と照らす＝同じ曲が続いとるだけの事が多い（tehonR 0〜3秒＝SCREAMTEKK の頭）
 allc = [v for v in meta if v != '_done']
 for s in secs:
     if s.get('name') not in (None, '不明') or not allc: continue
@@ -126,8 +126,8 @@ for s in secs:
             q = best[1]; s['name'] = q['name']; s.pop('fumei', None); s['cand_id'] = q['cand_id']; s['at0_fp'] = round(float(best[2]), 3); s.setdefault('konkyo', {})['mel_tsuzuki'] = round(best[0], 3)
             log.append(f'{s["a"]}-{s["b"]}秒：不明 → {q["name"]}（隣の曲の続き・メルの相関 {best[0]:.2f}）')
         else: log.append(f'{s["a"]}-{s["b"]}秒：不明のまま（指紋 一番 {meta[top[2]]["title"][:30]} {top[0]}・要る {need:.0f}・隣の続きの相関 {best[0]:.2f}）')
-# 🔒11/2 手本S（初見 曲 0%）：名前の無い隣どうし（Shazam が全部黙った・作者の候補も無い）は「別の曲という証拠」が無い限り1本
-#   手本S＝オリジナル曲1本を、拍の速さの揺れで 7つの「不明」に割っとった（速さの揺れは曲の中の揺れ＝10/30 mm4u と同じ）
+# 🔒11/2 tehonS（初見 曲 0%）：名前の無い隣どうし（Shazam が全部黙った・作者の候補も無い）は「別の曲という証拠」が無い限り1本
+#   tehonS＝オリジナル曲1本を、拍の速さの揺れで 7つの「不明」に割っとった（速さの揺れは曲の中の揺れ＝10/30 tehonU と同じ）
 #   証拠＝①境目に無音の切れ目（音楽の層が境目 ±0.5秒で、まわり ±8秒の中央値より 30dB 以上落ちる）②音の高さの並び（chroma の相関 0.85 未満）
 #   🟡 弱み：同じ系統の別の曲が切れ目なしに重なって替わる物（r2 の phonk どうし＝chroma 0.98・音色 0.98）は耳では分けられん＝名前が要る（Shazam の聞き直し・音源の名前）
 if os.path.exists(mus) and sum(1 for s in secs if s.get('name') in (None, '不明')) >= 2:

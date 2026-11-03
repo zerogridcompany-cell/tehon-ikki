@@ -1,4 +1,4 @@
-// 01 Particles（粒子が集まる）— 手本 手本M 01：f2〜f9 で散った粒が円に、f9〜f14.5 で12本の星に集まり、あとは瞬く
+// 01 Particles（粒子が集まる）— 手本 tehonM 01：f2〜f9 で散った粒が円に、f9〜f14.5 で12本の星に集まり、あとは瞬く
 // canvas 2D・粒 2200・加算合成（lighter）・粒は放射グラデの小さな絵（sprite）を drawImage
 import React, {useLayoutEffect, useMemo, useRef} from 'react';
 import {useCurrentFrame, useVideoConfig} from 'remotion';

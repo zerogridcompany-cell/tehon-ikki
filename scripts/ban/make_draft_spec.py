@@ -1,5 +1,5 @@
 # 仕様書（spec.json）から CapCut の下書きを組む。字（CapCut の字）・全画面の重ね絵（PNG/動画）・音を時刻どおりに並べる。
-# CapCut を閉じてから打つ：python3 make_draft_spec.py <spec.json の入った置き場>
+# mini で打つ（CapCut を閉じてから）：python3 make_draft_spec.py <spec.json の入った置き場>
 #   置き場の中身＝spec.json・fonts/*.ttf・spec が指す素材。全部を下書きの media/ に写してから使う（外に置くと「ファイルにアクセスできません」）
 # spec = {name, W, H, fps, dur, k_px, fonts:{名前: 置き場からの道},
 #   texts:[{t, font, px(字の em の画素), sx(横の倍率), anim:[{type:'in'|'out', id, name, dur(秒)}], x, y(字の箱の真ん中の画素・左上原点), color:'#rrggbb', alpha, a, b(秒), bold}],
@@ -11,7 +11,7 @@
 # 字の大きさ＝fs（CapCut の font_size）。CapCut は行の高さ（OS/2 の sTypoAscender−sTypoDescender）で大きさを決める＝1 あたり 11.46px（1920x1080 の下書きで測った）。fs = em画素 × typo の行の高さ/em ÷ 11.46
 import json, os, sys, copy, uuid, shutil, subprocess, time
 IN = os.path.expanduser(sys.argv[1]); S = json.load(open(f'{IN}/spec.json'))
-TPL = os.path.expanduser(os.environ.get('CK_TPL', '~/capcut_tpl'))   # 型の下書き＝CapCut で自分で作った下書き（動画の段2つ・字1つ・音1つ）を写した置き場
+TPL = os.path.expanduser(os.environ.get('CK_TPL', '~/work/zgvoid/tpl1024'))   # 型の下書き＝CapCut で自分で作った下書き（動画の段2つ・字1つ・音1つ）を写した置き場
 ROOT = os.path.expanduser('~/Movies/CapCut/User Data/Projects/com.lveditor.draft')
 NAME = S['name']; FOLD = f'{ROOT}/{NAME}'; MED = f'{FOLD}/media'
 W, H, FPS = S['W'], S['H'], S.get('fps', 30.0); K_PX = S.get('k_px', 4.0)

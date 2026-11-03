@@ -2,7 +2,7 @@
 # YouTube の止めが外れるまで30分ごとに試し、外れたら続きを回す（mini で使う・10/25）
 export PATH=$HOME/.local/bin:$PATH YT_SLEEP=10
 cd ~/work/tehon-me/r2
-until yt-dlp -q --no-warnings --skip-download --print id "https://www.youtube.com/watch?v=ZuKUOBvIKE4" >/dev/null 2>&1; do
+until yt-dlp -q --no-warnings --skip-download --print id "〈URL〉 >/dev/null 2>&1; do
   echo "$(date '+%m/%d %H:%M') まだ止められとる" >> resume.log; sleep 1800
 done
 echo "$(date '+%m/%d %H:%M') 開いた・続きを回す" >> resume.log

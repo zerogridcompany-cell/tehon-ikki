@@ -23,7 +23,7 @@ for i in range(1, len(Y)):
     if s[i] > 0.3 and i - cuts[-1] >= 3:
         cuts.append(i)
 cuts.append(len(Y))
-# 🔒10/30 つなぎ：段0 の図鑑があれば、カットは図鑑の物（コマぴったり・秒は pts）。scene 0.3 だけやと mm4u で 24 中 14 しか取れんかった
+# 🔒10/30 つなぎ：段0 の図鑑があれば、カットは図鑑の物（コマぴったり・秒は pts）。scene 0.3 だけやと tehonU で 24 中 14 しか取れんかった
 zp = f"{w}/zukan/zukan.json"; Z = json.load(open(zp)) if os.path.exists(zp) else None
 if Z:
     cuts = [c["f0"] for c in Z["cuts"]] + [Z["cuts"][-1]["f1"]]   # fps は ffprobe の r_frame_rate のまま（Remotion の fps＝30 や 29.97。pts の 30.0003 は使わん）

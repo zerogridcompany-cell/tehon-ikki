@@ -1,7 +1,7 @@
 # 行ごとに何本か録って、手本に一番近い1本を選ぶ（声・長さ・抑揚）
 import json, os, sys, math, urllib.request, numpy as np
 sys.path.insert(0,'tools'); from line_cmp import cmp
-K=open(os.path.expanduser(os.environ.get('TI_ELEVENLABS_KEY_FILE','~/.elevenlabs_key'))).read().strip()
+K=open(os.path.expanduser('~/.elevenlabs_key')).read().strip()
 V=open('narr/voice.txt').read().strip(); M='eleven_v4'
 def tts(text,out,seed,speed):
     if os.path.exists(out) and os.path.getsize(out)>1000: return

@@ -15,7 +15,7 @@
 | 2 | **指示文を仕上げる**：what＋測った数字（camera / movement / blur_words / palette）＋「no people, no text, no logos」。角度は what と参照コマから言葉に（low-angle・top-down・three-quarter 等 camera-work-24 の名前） | `shirabe/seisei/<番号>.txt` |
 | 3 | **撃つ前の照合**：`python3 ~/bin/shippai-shoumei.py init <作業>` → 失敗集の頭20と1行ずつ照らす（SHOUMEI.md） | 門＝shippai-zentai-gate.sh |
 | 4 | **見積もりを出して止まる**：480p 試し（Seedance 2.5 5秒≒15cr／Kling 2.5 5秒≒数十cr）→本番 1080p。カット数×本数×単価を表で見せて **「作って」を待つ** | 有料は「作って」の後だけ（CLAUDE.md） |
-| 5 | **撃つ**：`higgsfield account status` で 自分のアカウント を確かめてから。image→video（参照コマ = 手本の字幕を隠した1枚）か text→video。5秒が最小＝手本の秒に切る | higgsfield-generate |
+| 5 | **撃つ**：`higgsfield account status` で 〈メール〉 を確かめてから。image→video（参照コマ = 手本の字幕を隠した1枚）か text→video。5秒が最小＝手本の秒に切る | higgsfield-generate |
 | 6 | **当てる**：出来た動画を src/hi/<番号>.mp4 に置き、hi.json に手で登録（id="gen"・start=0・H は match.py で出す）→ `fit_all.py --only <番号>`（位置・色・ぼかしは手本に合う） | tehon-ikki 段3 |
 | 7 | **測る**：mane_check の秒ごとの表でそのカットの SSIM・ΔE が黒（0）より上がったか。モーションブラーが手本と違えば ref_look の blur_words を強弱して1つだけ変えて撃ち直す | 1回に1つだけ変える（feedback_one_change_per_shot） |
 

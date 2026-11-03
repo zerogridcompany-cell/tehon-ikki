@@ -23,6 +23,9 @@
 # 板の写しを CapCut で組むか（on/off）
 #TI_CAPCUT=off
 
+# whisper-cli の型（声の1語ずつの時刻。無ければその段は飛ばす）
+#TI_WHISPER_MODEL=$HOME/Library/Caches/whisper-cpp/ggml-large-v3-turbo.bin
+
 # 効果音の棚（: 区切り）
 #TI_SFX_DIRS=$HOME/sfx:$HOME/Music/sfx
 

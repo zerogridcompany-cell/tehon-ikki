@@ -1,8 +1,8 @@
 # 段4 字の入り方（フェード）を1コマずつ測る：同じ字が続く間（板をまたいでも1本）の、字の墨の明るさ÷その間で一番明るい時
 # 使い方：python3 ban_fade.py <ban の置き場> → fade.json {"frame": {"コマ": 割合}, "text": {"状態:字:箱x0": {"コマ": 割合}}}
 #   frame＝そのコマに出とる字の中央値（板ごと一斉のフェード）・text＝その字だけ中央値とずれる（ずらし入り・1字ずつ等）時の曲がり
-#   🔴 代表コマで割らん（手本R の最後の板は代表コマがフェードの途中＝割合が 2.4 になった）。🔴 変わる字（kawaru）も外さん（入りのフェードが「変わる」に拾われとる）
-#   🔴 CapCut のフェードのアニメ（6724916044072227332）は曲がり方が手本と違う（手本R：入り2コマ目 手本0.27／アニメ0.21）＝測った値を1コマずつ打つ
+#   🔴 代表コマで割らん（tehonR の最後の板は代表コマがフェードの途中＝割合が 2.4 になった）。🔴 変わる字（kawaru）も外さん（入りのフェードが「変わる」に拾われとる）
+#   🔴 CapCut のフェードのアニメ（6724916044072227332）は曲がり方が手本と違う（tehonR：入り2コマ目 手本0.27／アニメ0.21）＝測った値を1コマずつ打つ
 import json, os, sys
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -24,7 +24,7 @@ for k, z in enumerate(G):
     X0, Y0, X1, Y1 = z['ib']; X0, Y0, X1, Y1 = max(0, X0 - 4), max(0, Y0 - 4), min(W, X1 + 4), min(H, Y1 + 4)
     c = z['g'][Y0:Y1, X0:X1]
     if c.size < 20: continue
-    bg = np.percentile(c, 10)                          # 箱の中の明るさの合計（にじみ・大きさの変化があっても墨の量で測れる＝手本R v12 で書き出しと手本が 42.5／41.7 で合った測り方）
+    bg = np.percentile(c, 10)                          # 箱の中の明るさの合計（にじみ・大きさの変化があっても墨の量で測れる＝tehonR v12 で書き出しと手本が 42.5／41.7 で合った測り方）
     v = a[z['f0']:z['f1'], Y0:Y1, X0:X1].astype(np.float32).reshape(z['f1'] - z['f0'], -1).mean(1) - bg
     top = np.percentile(v, 95)
     if top < 30: continue
@@ -39,7 +39,7 @@ TX = {}
 for k, c in cur.items():
     dev = [abs(c[j] - FR.get(str(f), 1.0)) for j, f in enumerate(range(G[k]['f0'], G[k]['f1']))]
     if max(dev) <= 0.1: continue
-    # その字だけの曲がりは「0近くから上がる入り」「0近くへ下がる終わり」だけ採る（途中で明るくなる光り・暗くなる揺れは図の側＝手本R の TRAP は 38→57 に光る）
+    # その字だけの曲がりは「0近くから上がる入り」「0近くへ下がる終わり」だけ採る（途中で明るくなる光り・暗くなる揺れは図の側＝tehonR の TRAP は 38→57 に光る）
     lo = np.where(c < 0.99)[0]; n = len(c); ok = np.zeros(n, bool)
     if len(lo) and lo[0] == 0 and c[0] < 0.3:
         j = 0

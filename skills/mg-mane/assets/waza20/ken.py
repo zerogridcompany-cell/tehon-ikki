@@ -7,7 +7,7 @@ python3 ken.py <All20.mp4> <出す所> [--step 15] [--detail 3] [--only 1,5]
 """
 import argparse, json, os
 import numpy as np, cv2
-W20 = os.environ.get("WAZA20_TEHON") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "tehon")   # 手本の札（clip.mp4・keys.jpg）＝このスキルの中に写した物（元 ~/research/tehon-me/手本M/waza20）
+W20 = os.environ.get("WAZA20_TEHON") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "tehon")   # 手本の札（clip.mp4・keys.jpg）＝このスキルの中に写した物（元 ~/research/tehon-me/tehonM/waza20）
 ap = argparse.ArgumentParser(); ap.add_argument("mp4"); ap.add_argument("out")
 ap.add_argument("--step", type=int, default=15); ap.add_argument("--detail", type=int, default=3); ap.add_argument("--only", default="")
 ap.add_argument("--sec", type=int, default=75)

@@ -38,10 +38,10 @@ def one(j):
     subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", ref, "-vf", f"fps={GG['FPS_FF']},select=eq(n\\,{mid})", "-vsync", "0", "-frames:v", "1", f"{d}/ref.png"])
     open(f"{d}/task.md", "w").write(tpl.replace("__W__x__H__", f"{GG['W']}x{GG['H']}").replace("__DESC__", what or "見本のコマの中身").replace("__TONE__", "見本どおり"))
     if not os.path.exists(f"{d}/plate.png"):
-        subprocess.run([os.environ.get("TI_CODEX", "codex"), "exec", "--skip-git-repo-check", "-s", "workspace-write", "task.md を読んで、その通りに画像を1枚生成して plate.png に保存して。参照画像は ref.png。"], cwd=d, stdin=subprocess.DEVNULL, capture_output=True)
+        subprocess.run(["codex", "exec", "--skip-git-repo-check", "-s", "workspace-write", "task.md を読んで、その通りに画像を1枚生成して plate.png に保存して。参照画像は ref.png。"], cwd=d, stdin=subprocess.DEVNULL, capture_output=True)
     return j, os.path.exists(f"{d}/plate.png")
 with ThreadPoolExecutor(3) as ex: res = list(ex.map(one, jobs))
 for (k, s, e, _), ok in res:
     if not ok: print(k, s, "絵ができんかった"); continue
-    r = subprocess.run([sys.executable, f"{T}/plate_into_cut.py", w, k, f"{w}/mg/auto/{k}_{s}/plate.png", "--frames", f"{s}-{e - 1}"], capture_output=True, text=True)
+    r = subprocess.run(["/usr/bin/python3", f"{T}/plate_into_cut.py", w, k, f"{w}/mg/auto/{k}_{s}/plate.png", "--frames", f"{s}-{e - 1}"], capture_output=True, text=True)
     print(k, s, r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr[-200:])

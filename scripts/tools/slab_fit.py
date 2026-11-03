@@ -12,7 +12,7 @@ ap = argparse.ArgumentParser(); ap.add_argument("proj"); ap.add_argument("ref");
 ap.add_argument("--key", type=int); ap.add_argument("--iters", type=int, default=3)
 g = ap.parse_args()
 cfgp = f"{g.proj}/src/slabs.json"
-out = os.path.join(os.environ.get("TMPDIR", "/tmp"), "slabfit.png")
+out = "/private/tmp/claude-501/-Users-USER/08108b8f-776e-4cad-acdd-edef8a467f67/scratchpad/slabfit.png"
 ref = cv2.cvtColor(cv2.imread(g.ref), cv2.COLOR_BGR2GRAY)
 rm = ref > 150
 rm[:130, :260] = False  # 左上の札は外す

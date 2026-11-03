@@ -1,4 +1,4 @@
-// 02 Liquid morph（液体の玉がくっつく・離れる）— 手本 手本M 02：真珠色の金属っぽい玉（メタボール）が休まず合体・分裂（動きの量 4〜9/コマで一定）
+// 02 Liquid morph（液体の玉がくっつく・離れる）— 手本 tehonM 02：真珠色の金属っぽい玉（メタボール）が休まず合体・分裂（動きの量 4〜9/コマで一定）
 // canvas 2D の画素計算：場 F=Σr²/d² の 1 で縁・高さ h=√(1-1/F) から法線 → 映り込み（反射の向き R で 上＝白い空・横＝灰に左ピンク/右シアン・下＝金）＋白い光。1/3 の解像度で計算して拡大
 import React, {useLayoutEffect, useMemo, useRef} from 'react';
 import {useCurrentFrame, useVideoConfig} from 'remotion';

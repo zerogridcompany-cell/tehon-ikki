@@ -1,0 +1,153 @@
+{
+ "when": "2026-10-31 13:47",
+ "seed": 3,
+ "rows": [
+  {
+   "test": "耳 kick 曲なし",
+   "n": 76,
+   "miss": 0,
+   "extra": 1,
+   "med_ms": 0.5,
+   "p90_ms": 1.65,
+   "bias_ms": -0.46
+  },
+  {
+   "test": "耳 snare 曲なし",
+   "n": 70,
+   "miss": 4,
+   "extra": 0,
+   "med_ms": 0.4,
+   "p90_ms": 0.94,
+   "bias_ms": -0.07
+  },
+  {
+   "test": "耳 hat 曲なし",
+   "n": 74,
+   "miss": 2,
+   "extra": 2,
+   "med_ms": 0.43,
+   "p90_ms": 0.5,
+   "bias_ms": -0.43
+  },
+  {
+   "test": "耳 kick 曲 −12dB",
+   "n": 76,
+   "miss": 0,
+   "extra": "曲の音も入る＝数えん",
+   "med_ms": 0.47,
+   "p90_ms": 3.27,
+   "bias_ms": -0.36
+  },
+  {
+   "test": "耳 snare 曲 −12dB",
+   "n": 78,
+   "miss": 1,
+   "extra": "曲の音も入る＝数えん",
+   "med_ms": 0.39,
+   "p90_ms": 6.29,
+   "bias_ms": -0.13
+  },
+  {
+   "test": "耳 hat 曲 −12dB",
+   "n": 75,
+   "miss": 0,
+   "extra": "曲の音も入る＝数えん",
+   "med_ms": 0.45,
+   "p90_ms": 9.77,
+   "bias_ms": -0.45
+  },
+  {
+   "test": "耳 kick 曲 −6dB",
+   "n": 71,
+   "miss": 0,
+   "extra": "曲の音も入る＝数えん",
+   "med_ms": 0.7,
+   "p90_ms": 9.64,
+   "bias_ms": -0.29
+  },
+  {
+   "test": "耳 snare 曲 −6dB",
+   "n": 77,
+   "miss": 0,
+   "extra": "曲の音も入る＝数えん",
+   "med_ms": 1.04,
+   "p90_ms": 9.57,
+   "bias_ms": -0.16
+  },
+  {
+   "test": "耳 hat 曲 −6dB",
+   "n": 73,
+   "miss": 2,
+   "extra": "曲の音も入る＝数えん",
+   "med_ms": 0.52,
+   "p90_ms": 11.36,
+   "bias_ms": -0.52
+  },
+  {
+   "test": "目 cut",
+   "n": 9,
+   "miss": 0,
+   "ok0": 9,
+   "med_koma": 0.0,
+   "bias_koma": 0.0
+  },
+  {
+   "test": "目 fade",
+   "n": 8,
+   "miss": 0,
+   "ok0": 8,
+   "med_koma": 0.0,
+   "bias_koma": 0.0
+  },
+  {
+   "test": "目 flash",
+   "n": 8,
+   "miss": 0,
+   "ok0": 8,
+   "med_koma": 0.0,
+   "bias_koma": 0.0
+  },
+  {
+   "test": "目 part",
+   "n": 8,
+   "miss": 0,
+   "ok0": 8,
+   "med_koma": 0.0,
+   "bias_koma": 0.0
+  },
+  {
+   "test": "目 whip",
+   "n": 8,
+   "miss": 0,
+   "ok0": 8,
+   "med_koma": 0.0,
+   "bias_koma": 0.0
+  },
+  {
+   "test": "目 余計（正解に無い出来事）",
+   "n": 41,
+   "extra": 0
+  },
+  {
+   "test": "目 升の帳 余計（作った試験は止まった所が変わらん＝全部余計）",
+   "n": 13,
+   "extra": 1
+  },
+  {
+   "test": "本物 tehonU カット",
+   "n": 24,
+   "miss": 0,
+   "ok0": 24,
+   "extra": 0,
+   "masu": 93
+  },
+  {
+   "test": "音と絵（aac で書き出した後）",
+   "n": 48,
+   "got": 48,
+   "med_ms": 1.73,
+   "p90_ms": 4.33,
+   "bias_ms": -0.62
+  }
+ ]
+}

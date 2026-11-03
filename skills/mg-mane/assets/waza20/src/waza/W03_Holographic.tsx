@@ -1,4 +1,4 @@
-// 03 Holographic（虹の薄膜・ホログラム）— 手本 手本M 03：画面の幅いっぱいの、ねじれて浅いひだの寄った平たい輪が、倒れた向き（縦横比 0.67）から正面寄り（0.96）へ起き上がりながら回る。面に細かい虹の縞が流れる
+// 03 Holographic（虹の薄膜・ホログラム）— 手本 tehonM 03：画面の幅いっぱいの、ねじれて浅いひだの寄った平たい輪が、倒れた向き（縦横比 0.67）から正面寄り（0.96）へ起き上がりながら回る。面に細かい虹の縞が流れる
 // canvas 2D に自前の小さな 3D（輪を 720x120 の四角に割る→回す→遠い順に塗る）。色＝見る角度（1−|法線の z|）と帯の幅の位置と時間で色相を回す（薄膜の干渉の見た目）
 import React, {useLayoutEffect, useMemo, useRef} from 'react';
 import {useCurrentFrame, useVideoConfig} from 'remotion';

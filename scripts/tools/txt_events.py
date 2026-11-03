@@ -25,7 +25,7 @@ for p in files:
 bs = sorted(glob.glob(f"{bd}/*.png"))
 raw = {}
 for k in range(0, len(bs), 200):
-    out = subprocess.run([os.environ.get("TI_OCR") or os.path.expanduser("~/bin/ocr-box")] + bs[k:k + 200], capture_output=True, text=True).stdout
+    out = subprocess.run([os.path.expanduser("~/bin/ocr-box")] + bs[k:k + 200], capture_output=True, text=True).stdout
     for line in out.splitlines():
         parts = line.split("\t")
         if len(parts) < 3 or not parts[1].strip():

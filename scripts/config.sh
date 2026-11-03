@@ -21,6 +21,7 @@ TI_LOOP_MODEL="${TI_LOOP_MODEL:-opus}"
 TI_OCR="${TI_OCR:-}"                                           # 空＝scripts/tools/bin/ocr-words（初回に swiftc で組む）
 TI_CAPCUT="${TI_CAPCUT:-off}"                                  # on＝板の写しを CapCut で組む（macOS・CapCut デスクトップ版）
 TI_SFX_DIRS="${TI_SFX_DIRS:-}"                                 # 効果音の棚（: 区切り）。空＝<作業>/oto/sfx だけ
+TI_WHISPER_MODEL="${TI_WHISPER_MODEL:-$HOME/Library/Caches/whisper-cpp/ggml-large-v3-turbo.bin}"   # 声の1語ずつ（whisper-cli の型）
 TI_WORK_ROOT="${TI_WORK_ROOT:-$HOME/tehon-ikki-work}"         # 音の段の置き場など、作業フォルダが決まってない時の既定
-export TI_PY TI_NODE_MODULES TI_ELEVENLABS_KEY_FILE TI_CODEX TI_CLAUDE TI_LOOP_MODEL TI_OCR TI_CAPCUT TI_SFX_DIRS TI_WORK_ROOT
+export TI_WHISPER_MODEL TI_PY TI_NODE_MODULES TI_ELEVENLABS_KEY_FILE TI_CODEX TI_CLAUDE TI_LOOP_MODEL TI_OCR TI_CAPCUT TI_SFX_DIRS TI_WORK_ROOT
 ti_skip(){ echo "⏭️ 飛ばした：$1（理由：$2）" | tee -a "${TI_SKIP_LOG:-/dev/null}"; }

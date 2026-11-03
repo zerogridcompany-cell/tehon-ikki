@@ -6,7 +6,7 @@ python3 ugoki.py <All20.mp4> [--sec 75] [--json 出す所.json]
 """
 import argparse, json, os
 import numpy as np, cv2
-W20 = os.environ.get("WAZA20_TEHON") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "tehon")   # 手本の札（clip.mp4・keys.jpg）＝このスキルの中に写した物（元 ~/research/tehon-me/手本M/waza20）
+W20 = os.environ.get("WAZA20_TEHON") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "tehon")   # 手本の札（clip.mp4・keys.jpg）＝このスキルの中に写した物（元 ~/research/tehon-me/tehonM/waza20）
 ap = argparse.ArgumentParser(); ap.add_argument("mp4"); ap.add_argument("--sec", type=int, default=75); ap.add_argument("--json", default="")
 A = ap.parse_args()
 idx = json.load(open(os.path.join(W20, "index.json")))

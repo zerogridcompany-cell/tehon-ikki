@@ -81,7 +81,7 @@ if not done:
     gate = sorted({int(np.argmin(np.abs(T - float(x)))) for x in re.findall(r"pts_time:([\d.]+)", e)})
     src = {}
     for i in gate: src.setdefault(i, []).append("ffmpeg")
-    # 絵の中だけ（黒い地・枠を外す）で前後の形と色を比べる＝縦型の小窓の手本で「同じ人・同じ色の別カット」を拾う（10/30 mm4u：670・802・810・859 を見落としとった）
+    # 絵の中だけ（黒い地・枠を外す）で前後の形と色を比べる＝縦型の小窓の手本で「同じ人・同じ色の別カット」を拾う（10/30 tehonU：670・802・810・859 を見落としとった）
     def box_pair(i, j):
         a, b_ = G[i].astype(np.float32), G[j].astype(np.float32); mk_ = np.maximum(a, b_) > 25; ys, xs = np.where(mk_)
         if len(ys) < 50: return 1.0, 0.0, 0.0
@@ -252,7 +252,7 @@ if not done:
         ratio_ = max((x[0] if x[0] >= 1 else 1 / max(x[0], 1e-3)) for x in rat)
         prev = UG.get(c["i"] - 1, {}).get("kamera", {}); sc = prev.get("s", [])[-3:]
         zth = float(np.prod(sc)) if sc else 1.0
-        # 振りは「切れ目のコマだけ」流れとる時だけ（縦長の小窓は線の向きがいつも偏る＝mm4u で 20 中 15 が whip になっとった）
+        # 振りは「切れ目のコマだけ」流れとる時だけ（縦長の小窓は線の向きがいつも偏る＝tehonU で 20 中 15 が whip になっとった）
         nb_ = [grad_ratio(G[x]) for x in list(range(max(0, f - 6), max(0, f - 2))) + list(range(min(N, f + 3), min(N, f + 7)))]
         base_r = float(np.median([(x[0] if x[0] >= 1 else 1 / max(x[0], 1e-3)) for x in nb_])) if nb_ else 1.0
         why["flow_base"] = round(base_r, 2)
@@ -278,8 +278,15 @@ KK = {k["i"]: k for k in kirikae["cuts"]}
 mikake, done = step("mikake")
 if not done:
     import ca_vig
-    import mediapipe as mp
-    FD = mp.solutions.face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.6)
+    # 🆕11/02 mediapipe が無い Mac でも止めん（doctor は🟡）＝顔は「測れん」と書いて先へ（toku の Mac で段0 がここで落ちて何も出んかった）
+    FD = None; KAO_NASHI = ""
+    try:
+        import mediapipe as mp
+        FD = mp.solutions.face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.6)
+    except Exception as ex:
+        KAO_NASHI = f"mediapipe が使えん（{type(ex).__name__}）＝顔は測ってない・pip install mediapipe で測れる"
+        log("🟡 顔の測りを飛ばした：" + KAO_NASHI)
+        if os.environ.get("TI_SKIP_LOG"): open(os.environ["TI_SKIP_LOG"], "a").write(f"⏭️ 飛ばした：顔の測り（理由：{KAO_NASHI}）\n")
     need = {}
     for c in cuts:
         f0, f1 = c["f0"], c["f1"]; mid = f0 + (f1 - f0) // 2
@@ -317,6 +324,7 @@ if not done:
         return float(1 - edge / max(cf[0], 1e-3))
 
     def faces(img):
+        if FD is None: return []
         im = cv2.resize(img, (640, int(round(640 * HH / WW))))
         d = FD.process(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)); out = []
         for det in (d.detections or []):
@@ -375,7 +383,7 @@ if not done:
                    kumi=dict(power=round(hp, 1), period_px=hper if hper else nashi(f"山の強さ {hp:.1f}＝周期 2.2〜6px に山なし"), ari=bool(hp > 40), rule="ht_scan：山÷中央値 >40 で網点あり"),
                    shuushuu=dict(kr=kr, kb=kb, ari=bool(kr is not None and max(abs(kr), abs(kb)) >= 0.002), rule="ca_vig の倍率（±0.002 以上で色収差あり）"),
                    fuchi=dict(kurasa=round(vg, 3), ari=bool(vg >= 0.15), rule="真ん中から縁へ 15% 以上暗い＝暗い縁"),
-                   kao=fbest if fbest else nashi(f"顔 0（{len(fs)}コマを mediapipe・確かさ0.6）"),
+                   kao=fbest if fbest else (nashi(KAO_NASHI, tobashita=True) if KAO_NASHI else nashi(f"顔 0（{len(fs)}コマを mediapipe・確かさ0.6）")),
                    e_hani=cb if cb else nashi("全部平ら（列の散らばり 6 未満）"),
                    shuyaku=(dict(kind="顔", **fbest[0]) if fbest else (dict(kind="線の強い所（70%の箱）", **sb) if sb else nashi("線の強さの合計 0（全部平ら）"))))
         mikake.append(row)

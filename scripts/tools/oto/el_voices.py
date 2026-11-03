@@ -1,6 +1,6 @@
 # ElevenLabs の既製の声（公式＋みんなの声）の見本を集める（見本は無料）
 import json, os, sys, urllib.request, urllib.parse, time
-K=open(os.path.expanduser(os.environ.get('TI_ELEVENLABS_KEY_FILE','~/.elevenlabs_key'))).read().strip()
+K=open(os.path.expanduser('~/.elevenlabs_key')).read().strip()
 def get(url):
     r=urllib.request.Request(url,headers={'xi-api-key':K}); return json.load(urllib.request.urlopen(r,timeout=60))
 out=[]

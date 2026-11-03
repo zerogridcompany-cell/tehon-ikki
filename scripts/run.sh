@@ -36,10 +36,12 @@ guard(){
 }
 case "$1" in
   miru)  REF="$2"; W="$3"; mkdir -p "$W"; guard || exit 1
+         export TI_SKIP_LOG="$(cd "$W" && pwd)/skipped.log"   # 無い道具で飛ばした段はここに1行ずつ
          # 🔒 手本は1回だけ見る。作る段は zukan.json の数字だけを使う・測り直さん（差の検査は最後の門だけ）
          $PY "$HERE/miru/miru.py" "$REF" "$W" ${@:4} 2>&1 | grep -vE "Warn|^I0000|^W0000|^INFO|non monotonically"
          $PY "$HERE/miru/zukan_plus.py" "$W" 2>&1 | grep -v Warn   # 板の切り替え・図が動くコマ・音は絵の何ms後・フェードの曲がり・字体（assets/fonts_tana に自分で字体を置く）・変わる字
          { $PY "$HERE/miru/kyoku_plus.py" "$W" 2>&1 | grep "曲の決め直し"; } || echo "🟡 曲の決め直しは飛ばした"   # 曲は Shazam の作者の他の曲も指紋で比べ直す・不明の区間は隣の曲の続きか・声は曲の声か語りか（yt-dlp が要る）
+         { $PY "$HERE/miru/moji_plus.py" "$W" 2>&1 | grep "反転"; } || echo "🟡 字の点滅・厚み・後ろは飛ばした"   # 🔒11/2 手本J：字の点滅・厚み・人の後ろ・反転の切り替わり
          $PY "$HERE/miru/check_zukan.py" "$W" ;;
   meshiken) $PY "$HERE/miru/me_shiken.py" "$2/zukan/zukan.json" "$3" "$2/zukan/me_shiken.json" ;;   # 目の試験：詰め切った答え（seikai.json）と照らして最初に見えた割合
   kouzou) W="$2"; KZ="$HERE/kouzou"; mkdir -p "$W/kouzou"; REF=$(ls "$W"/ref/*.mp4 | head -1)
@@ -60,14 +62,21 @@ case "$1" in
     [ -d "$W/proj" ] || bash "$0" init "$REF" "$W"
     if [ -n "$K" ] && [ "$(cd "$(dirname "$K")" && pwd)/$(basename "$K")" != "$(cd "$W" && pwd)/決め.md" ]; then cp "$K" "$W/決め.md"; fi
     [ -f "$W/決め.md" ] || { echo "🔴 $W/決め.md が無い（実写の埋め方・有料生成の許可・書体の候補）＝先に本人に1回聞いて書く"; exit 1; }
+    # 🆕11/02 回し役（Claude Code）が無いと、前は「回し始めた」と出たまま何も出んかった＝1本目だけ出して止まる
+    if [ "$TI_CLAUDE" = off ]; then
+      ls "$W"/v*.mp4 >/dev/null 2>&1 || bash "$0" render "$W" v1 || { echo "🔴 1本目の書き出し（render v1）が通らん＝上の赤い行を見る・run.sh doctor"; exit 1; }
+      echo "🔴 Claude Code が無い＝回し役（係）が動かせん。1本目だけ出した：$W/v1.mp4（比べ＝$W/v1_比べ.mp4・点＝$W/check_v1/mane_check.md）"
+      echo "   続き＝Claude Code を入れてログインしてから bash $0 loop $W"; exit 1
+    fi
     nohup bash "$HERE/ikki_loop.sh" "$W" > "$W/ikki_loop.out" 2>&1 &
-    echo "回し始めた：記録 $W/ikki_loop.log・終わり＝$W/IKKI_END（GOAL／REST／MAXRESTART）"
+    echo "回し始めた：記録 $W/ikki_loop.log・係の出力 $W/run.log・終わり＝$W/IKKI_END（GOAL／REST／MAXRESTART／KAKARI_OCHI）"
+    echo "   1本目（v1.mp4・v1_比べ.mp4）は係が数分〜数十分で出す。出ん時は $W/ikki_loop.log と run.log の最後を見る"
     ;;
   loop) nohup bash "$HERE/ikki_loop.sh" "$2" > "$2/ikki_loop.out" 2>&1 & echo "回し始めた：$2/ikki_loop.log" ;;
   init)
     REF="$2"; W="$3"; mkdir -p "$W/ref" "$W/cuts" "$W/src" "$W/shirabe"
     cp -n "$REF" "$W/ref/" 2>/dev/null || true   # 🔒11/2 BSD の cp -n は「もうある」で 1 を返す＝set -e で init が黙って死んどった（作業の中に ref がある時）
-    if [ ! -d "$W/proj" ]; then cp -R "$SK/assets/proj" "$W/proj"
+    if [ ! -d "$W/proj" ]; then cp -R "$SK/assets/proj" "$W/proj"; mkdir -p "$W/proj/public/fonts"   # 🆕11/02 git は空のフォルダを持たん＝public が無くて render の cp で落ちとった
       # 🔴11/02 前は作者の Mac の場所に決め打ちでつないどった＝他の人の Mac では Remotion が無くて何も出んかった
       if [ -n "$NODE_MODULES" ] && [ -d "$NODE_MODULES/remotion" ]; then ln -s "$NODE_MODULES" "$W/proj/node_modules"
       else echo "Remotion を入れる（初回だけ・数分）"; (cd "$W/proj" && npm install --no-audit --no-fund) || { echo "🔴 npm install が通らん＝run.sh doctor を見る"; exit 1; }; fi
@@ -77,7 +86,7 @@ case "$1" in
     $PY "$HERE/eye_prep.py" "$W"
     cp "$W/cfg.json" "$W/proj/src/cfg.json"
     $PY "$HERE/zukan_proj.py" "$W"
-    if [ "$TI_CODEX" = off ]; then TI_SKIP_LOG="$W/skipped.log" ti_skip "カットの目（eye/out.json）" "Codex が off"
+    if [ "$TI_CODEX" = off ]; then TI_SKIP_LOG="$W/skipped.log" ti_skip "カットの目（eye/out.json の中身）" "Codex が off＝カットの秒だけの骨で進める"; $PY "$HERE/eye_nashi.py" "$W"
     else echo "次：Codex に eye/task.md を渡して eye/out.json を作らせる（cd $W/eye && $TI_CODEX exec --skip-git-repo-check -s workspace-write \"task.md を読んでその通りに out.json を作って\"）"; fi
     ;;
   plates)
@@ -116,7 +125,7 @@ P
   render)
     W="$2"; V="$3"; guard; cd "$W"; REF=$(ls ref/*.mp4 | head -1)
     # 🔴 土台は毎回組み直す（r2 で base.mp4 が古いまま＝テレビ5カットが黒かった）
-    $PY "$T/assemble.py" . "base_$V"; cp "base_$V.mp4" proj/public/base.mp4
+    $PY "$T/assemble.py" . "base_$V"; mkdir -p proj/public; cp "base_$V.mp4" proj/public/base.mp4
     # 🔴 --gl=angle（無いと three.js の場面で WebGL が作れず落ちる）・同時に描く数 3（16GB の Mac を詰まらせん）
     (cd proj && npx remotion render src/index.ts Main "../${V}_noaudio.mp4" --muted --gl=angle --concurrency=3)
     ffmpeg -nostdin -v error -y -i "${V}_noaudio.mp4" -i "$REF" -map 0:v -map 1:a? -c:v copy -c:a aac -shortest "$V.mp4"

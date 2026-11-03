@@ -34,7 +34,7 @@ def fetch(vid, cdir):
         return f
     time.sleep(SLEEP)  # 落とす間を空ける（10/25 Air も mini も「ロボットか確かめる」で止められた）
     subprocess.run(["yt-dlp"] + (["--cookies-from-browser", os.environ["YT_COOKIES"]] if os.environ.get("YT_COOKIES") else []) + ["-q", "--no-warnings", "-f", "bv*[height<=360][ext=mp4]/bv*[height<=480]/b[height<=480]",
-                    "-o", f, "--remux-video", "mp4", f"https://www.youtube.com/watch?v={vid}"], capture_output=True)
+                    "-o", f, "--remux-video", "mp4", f"〈URL〉], capture_output=True)
     return f if os.path.exists(f) else None
 
 
@@ -78,7 +78,7 @@ def main():
                 res = json.loads(r.stdout.strip().splitlines()[-1])
             except Exception:
                 continue
-            res.update({"id": c["id"], "url": f"https://www.youtube.com/watch?v={c['id']}"})
+            res.update({"id": c["id"], "url": f"〈URL〉]}"})
             if res.get("found") and res["ssim"] >= 0.5 and (best is None or res["ssim"] > best["ssim"]):
                 best = res
             if best and best["ssim"] >= 0.8:

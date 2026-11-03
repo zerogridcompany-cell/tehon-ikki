@@ -3,7 +3,7 @@
 #         python3 epidemic_cat.py get <slug,…|ALL> … そのカテゴリを全ページ取る
 import json, os, sys, re
 from playwright.sync_api import sync_playwright
-OUT=os.path.expanduser(os.environ.get('TI_SFX_CORPUS', os.path.join(os.environ.get('TI_WORK_ROOT','~/tehon-ikki-work'),'oto/sfx/corpus/E2'))); MAN=OUT+'/_list_cat.json'; CATS=OUT+'/_cats.json'
+OUT=os.path.expanduser('~/research/tehon-me/r2/oto/sfx/corpus/E2'); MAN=OUT+'/_list_cat.json'; CATS=OUT+'/_cats.json'
 man=json.load(open(MAN)) if os.path.exists(MAN) else {}
 # 言葉で取った一覧（別の係が書く）は読むだけ＝同じ物を二度取らん
 old=set(json.load(open(OUT+'/_list.json')))

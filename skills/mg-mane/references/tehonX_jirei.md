@@ -1,12 +1,12 @@
-# 実例：手本X（11/2・構成の写し v2＝このスキルの元）
+# 実例：tehonX（11/2・構成の写し v2＝このスキルの元）
 
 本人「素晴らしすぎる・めちゃ成長してる」。tehon-ikki の構成の写しを `run.sh ikki` 1回で回し、v2 で止めた。有料生成 0cr。
 
 ## 手本
-- TikTok の手本X（音楽アプリ風 UI の広告・12.6 秒）
+- TikTok @tehonX「Did we just make a better @Spotify ad than Spotify?」（〈URL〉
 - 1920x1080・29.97fps・379コマ・12.65秒・-17.4 LUFS。After Effects の MG（Spotify 風の UI・字の打ち込み・ロゴ）。暗い緑の光の地
 - 実写なし・人なし（丸いアバターの小さい写真だけ）・語りなし・曲は Shazam 当たらず（作り手のオリジナルのパッド）
-- 作業＝`~/research/tehon-me/手本X/`（決め.md・rikai/・tools/・proj/src/xz/XZ.tsx・手本X_kousei_v1.mp4・v2.mp4・mise/）
+- 作業＝`~/research/tehon-me/tehonX/`（決め.md・rikai/・tools/・proj/src/xz/XZ.tsx・tehonX_kousei_v1.mp4・v2.mp4・mise/）
 
 ## カット（図鑑と目で見た数が同じ＝6）
 | カット | コマ | 中身 | カメラ・動き |
@@ -37,7 +37,7 @@
 | 照合の門（tehon-oracle vsl） | — | 🔴0・⚠︎1（字幕の間 0.32秒） | 同じ |
 - 区間は `--kukan "UI:0-142,入力欄:143-185,字の板:186-378"`。hakaru は区間の頭の切り替えのコマの差を抜く＝数値の照合.md より入力欄・字の板が少し小さく出る（照合.md は 入力欄 量 1.44→1.78・ギザ 0.31→0.43）
 
-## 道具（係が作った物・`~/research/tehon-me/手本X/tools/`＝型として読む）
+## 道具（係が作った物・`~/research/tehon-me/tehonX/tools/`＝型として読む）
 | 道具 | 何を | 段 |
 |---|---|---|
 | cam_track.py | 手本の隣り合うコマの相似（拡大・移動・回転）を ORB 4000点＋RANSAC で。明るい所（>70）だけ | A |
@@ -84,5 +84,5 @@
 | SSIM 平均 | — | 0.941 | 0.942 |
 | 効果音 ±30ms | 33個 | 29/33（古い棚＋自作） | 21/33（全部 Epidemic・ずれ中央 6ms） |
 | LUFS | -17.4 | -17.5 | -17.4 |
-- 直した物：①カメラの道（cam0/cam1.json）を Savitzky-Golay（窓11・3次・大きさは対数）で滑らかに ②UI の出入り（r01）を easy-ease（smoothstep）に。字の板は直線のまま（ease-out 0.44・smoothstep 0.42 と悪化した） ③音＝手本X/tools/oto_build_v3.py（出所＝oto/出所_v3.md）：鳴り始め＝波形が山の15%の所・大きさ＝手本のその時刻の混ざった音（50ms）に2周で合わせ・ブームは手本のその音の長さで減衰・曲の大きさは効果音の無い窓で合わせ ④音は Remotion の <Audio> を通さず（43ms 遅れる）`--props '{"noAudio":true}'` で書き出して ffmpeg で貼る
+- 直した物：①カメラの道（cam0/cam1.json）を Savitzky-Golay（窓11・3次・大きさは対数）で滑らかに ②UI の出入り（r01）を easy-ease（smoothstep）に。字の板は直線のまま（ease-out 0.44・smoothstep 0.42 と悪化した） ③音＝tehonX/tools/oto_build_v3.py（出所＝oto/出所_v3.md）：鳴り始め＝波形が山の15%の所・大きさ＝手本のその時刻の混ざった音（50ms）に2周で合わせ・ブームは手本のその音の長さで減衰・曲の大きさは効果音の無い窓で合わせ ④音は Remotion の <Audio> を通さず（43ms 遅れる）`--props '{"noAudio":true}'` で書き出して ffmpeg で貼る
 - 残り：UI の要素ごとの出入り（0〜12・33〜45・64〜82）が手本の 1.5倍ギザギザ＝要素ごとのモーションブラーとイージング／Epidemic の本物の音は立ち上がりが自然で機械の鳴り始め検出が 22/33（耳では本人が決める）

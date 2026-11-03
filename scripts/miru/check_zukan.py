@@ -8,7 +8,7 @@ python3 check_zukan.py <作業>   → 赤があれば exit 1
 import json, os, re, sys
 W_ = os.path.abspath(sys.argv[1]); p = f"{W_}/zukan/zukan.json"
 if not os.path.exists(p): print("🔴 zukan.json が無い＝run.sh miru を先に"); sys.exit(1)
-zk = json.load(open(p)); red = []; ok = []
+zk = json.load(open(p)); red = []; ok = []; yel = []
 KEYS = ["kirikae", "awase", "kamera", "ugoki", "seishi", "iro", "tsubu", "surudosa", "boke", "kumi", "shuushuu", "fuchi", "kao", "e_hani", "shuyaku", "moji", "mg", "oto"]
 
 
@@ -19,6 +19,8 @@ def empty(v):
 def walk(v, path, out):
     if isinstance(v, dict):
         if v.get("v") == "なし":
+            if v.get("tobashita"):   # 🆕11/02 道具が無くて測ってない（doctor の🟡）＝赤にせん・黄で数える
+                yel.append(f"{path}＝{v.get('konkyo')}"); return
             if not re.search(r"\d", str(v.get("konkyo", ""))): out.append(f"{path}＝「なし」なのに根拠の数字が無い")
             return
         for k, x in v.items():
@@ -55,6 +57,9 @@ else:
 if empty(zk.get("kimari")): red.append("区間の決まり（kimari）が空")
 ok.append(f"カット {len(C)}・升 {len(C) * len(KEYS)}")
 for x in ok: print("✅", x)
+if yel:
+    import collections
+    for k, n in collections.Counter(re.sub(r"^#\d+\.", "", y) for y in yel).items(): print("🟡", f"{k}（{n}か所・道具が無くて測ってない＝作る段は進む）")
 for x in red[:60]: print("🔴", x)
 if len(red) > 60: print(f"🔴 ほか {len(red) - 60}")
 print("門", "OK" if not red else f"止める（赤 {len(red)}）"); sys.exit(1 if red else 0)

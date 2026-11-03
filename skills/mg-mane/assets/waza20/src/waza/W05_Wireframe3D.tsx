@@ -1,4 +1,4 @@
-// 05 Wireframe 3D（線だけの立体・街を前へ進む）— 手本 手本M 05：生成りの紙に青紫の線の箱（ビル）が道の両側に並び、一点透視で手前へ流れる。道の真ん中に朱の破線
+// 05 Wireframe 3D（線だけの立体・街を前へ進む）— 手本 tehonM 05：生成りの紙に青紫の線の箱（ビル）が道の両側に並び、一点透視で手前へ流れる。道の真ん中に朱の破線
 // SVG の線：箱の12辺を透視で写す（手前の面で切る）。遠いほど線を薄く。速さは最初だけ少し速く（動きの量 16→10）
 import React, {useMemo} from 'react';
 import {useCurrentFrame, useVideoConfig} from 'remotion';
