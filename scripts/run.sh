@@ -28,6 +28,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"; T="$HERE/tools"; SK="$(cd "$HERE/.." && p
 PY="$TI_PY"; NODE_MODULES="$TI_NODE_MODULES"
 guard(){
   local free=$(sysctl -n vm.swapusage 2>/dev/null | sed -E 's/.*free = ([0-9.]+)M.*/\1/'); free=${free:-9999}
+  local total=$(sysctl -n vm.swapusage 2>/dev/null | sed -E 's/.*total = ([0-9.]+)M.*/\1/'); [ "${total%.*}" = 0 ] && free=99999   # 🔒11/3 再起動の直後はスワップ 0＝残り 0 と読まん（guard が永久に待った）
   local pct=$(memory_pressure 2>/dev/null | awk -F': ' '/free percentage/{gsub("%","",$2);print $2}')
   echo "見張り：スワップの残り ${free}MB・メモリの空き ${pct}%"
   if [ "${free%.*}" -lt 500 ] || [ "${pct:-100}" -lt 15 ]; then echo "🔴 重い作業を止める（スワップ 500MB 未満かメモリ 15% 未満）"; return 1; fi
