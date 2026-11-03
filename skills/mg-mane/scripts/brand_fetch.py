@@ -44,7 +44,7 @@ def main():
             try:
                 u=commons(t)
                 if u:
-                    b=get(u); p=os.path.join(out,f'{name}.svg' if u.lower().endswith('.svg') else f'{name}_commons'+os.path.splitext(u)[1]); open(p,'wb').write(b); got.append(('commons',u,p))
+                    u0=u.split('?')[0]; b=get(u); p=os.path.join(out,f'{name}.svg' if u0.lower().endswith('.svg') else f'{name}_commons'+os.path.splitext(u0)[1]); open(p,'wb').write(b); got.append(('commons',u,p))
             except Exception as e: print('commons 取れん:',e)
     if src in ('auto','simpleicons'):
         try:
