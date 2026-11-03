@@ -2,6 +2,7 @@
 # mg-mane の入口（薄い）。中身は tehon-ikki の道具を呼ぶだけ（写さん）。
 #   mg_mane.sh miru   <手本.mp4> [作業]               … 段0 見る（作業の既定＝~/research/tehon-me/<手本の名前>・手本は <作業>/ref/ に置く）→ run.sh miru
 #   mg_mane.sh kime   <手本.mp4> <作業>               … 決め.md を型（references/kime_template.md）から書くだけ（あれば触らん）
+#   mg_mane.sh gamen measure|cmp …           … 画面の全部を数字に（光の中心・山・落ち・減光・色・にじみ・物の箱・面の向き）→ 差の表と重ね（11/3）
 #   mg_mane.sh nameraka <手本.mp4> <うち.mp4> [--out 置き場]  … 滑らか（動いとる画素の速さ v(t) を区間ごとに手本と比べる・止まり 0 が門）
 #   mg_mane.sh ikki   <手本.mp4> <作業> [決め.md]     … 図鑑が無ければ miru → 決め.md が無ければ kime → run.sh ikki（裏で係が A〜D・v2 で止まる）
 #   mg_mane.sh ken    <手本.mp4> <うち.mp4> <出す所> [--step 6] [--from コマ --to コマ] … 検品の一覧（6コマおき・上＝手本・下＝うち）→ <出す所>/k00.jpg …
@@ -62,6 +63,7 @@ case "$1" in
     echo "見張り：$W/ikki_loop.log。🟡 見張りの点は 0 のまま・3回で REST で止まるのが正常（構成の写しの点は mg_mane.sh hakaru で測る）" ;;
   ken)    [ -n "$4" ] || { echo "使い方：mg_mane.sh ken <手本.mp4> <うち.mp4> <出す所> [--step 6] [--from コマ --to コマ]"; exit 1; }; $PY "$HERE/ken.py" "${@:2}" ;;
   hakaru) [ -n "$3" ] || { echo "使い方：mg_mane.sh hakaru <手本.mp4> <うち.mp4> [--kukan 名:a-b,…] [--md 出す.md] [--json 出す.json]"; exit 1; }; $PY "$HERE/hakaru.py" "${@:2}" ;;
+  gamen)  [ -n "$3" ] || { echo "使い方：mg_mane.sh gamen measure <mp4> <out.json> [--step 6 --kukan 名:a-b,…] ／ gamen cmp <手本.json> <うち.json> [--md 出す.md --png 重ね.png]"; exit 1; }; $PY "$HERE/gamen.py" "${@:2}" ;;
   nameraka) [ -n "$3" ] || { echo "使い方：mg_mane.sh nameraka <手本.mp4> <うち.mp4> [--out 置き場] [--top 5]（滑らか＝止まり・速さの波・ギザ・折れ）"; exit 1; }; $PY "$HERE/nameraka.py" "${@:2}" ;;
   kurabe)
     A="$2"; B="$3"; O="$4"; [ -f "$A" ] && [ -f "$B" ] && [ -n "$O" ] || { echo "使い方：mg_mane.sh kurabe <手本.mp4> <うち.mp4> <出す所>"; exit 1; }
