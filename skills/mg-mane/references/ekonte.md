@@ -19,3 +19,5 @@
 - 絵コンテは「構図と順番と秒」だけ決める物。色・動き・質感は本番で（手本も鉛筆の丸と線だけ）
 - 声が先（ElevenLabs 直 API・11/3 支払い済み）。秒は声から取る＝手で書かん
 - 1場面 2〜4秒・1画面に物は 3 つまで（手本は最大 3）
+
+- 🆕11/4 **絵の絵コンテ**（ZeroGrid 60s 絵コンテ2）：句に `img`（Codex の 16:9 の絵）を足すと、板は「左＝絵・右＝画面／動き／技／音／実物のメモ」の横板になる＝`ekonte_board.py ekonte2.json out.mp4 --w 1920 --h 1080 --voice vo.wav --words sync.json --sheet sheet.png`。絵は 1 場面 1 枚・指示文に札の位置・字・ボタンの言葉・色・影・余白を全部書く・ロゴは描かせん（空の枠）・見て違えば 1 枚 3 回まで撃ち直し。実例＝~/research/zerogrid-launch-20261103/ekonte2/（tools/gen.py・prompts.json・img/一覧.md）
