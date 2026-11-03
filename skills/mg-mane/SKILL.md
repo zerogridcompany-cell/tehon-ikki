@@ -101,6 +101,9 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 - 区間ごと（既定＝手本の切り替えで割る・`--kukan "UI:0-142,入力欄:143-185,字の板:186-378"` で名前つき）に波・量・滑らかさも出る。🔴の区間は全コマの一覧で見る（`$M ken … --from 186 --to 240 --step 1 --per 8`）
 - 🔴は直す候補。v2 で直すのは検品表の行・カメラの曲線・音だけ。届かん所は 作り方.md の頭打ちの表へ（v3 は本人が言うた時だけ）
 
+## 🔒 光の作り方（11/3 夜・references/hikari.md・実物 13 本を測った）
+放射光は **芯＋長い裾の二段**（中心から幅の約 11% で半分・幅の 28〜48% でもまだ山の 15〜25%）＝CSS の radial-gradient 1 本やガウス 1 本では裾が足りん。文字のグロウ＝text-shadow を半径が倍々の 4〜5 段・芯は暖色の白（#fff3d6）。テカリ＝縦グラデ＋斜め 105° の白い帯（幅はロゴ幅の 12〜15%）を走らせる。縁の光・光の線の層は hikari.md。測り＝`gamen.py`（断面 24 点・縁の硬さ・σ）
+
 ## 🔒 easing の役（11/3 夜・references/easing.md）
 動く物は役で曲線を決める＝**出る＝Ease Out／消える＝Ease In／移動＝Ease In-Out／回る・ループ＝Linear／味＝Overshoot（控えめ）**・弾む＝Elastic/Bounce・段＝Steps。`assets/ease.ts` の `EASE.out/in/inout/linear/overshoot/elastic/bounce/steps`。線形で出す・止めるはカクつき＝禁止。絵コンテの `ugoki` は役の名前で書く
 
