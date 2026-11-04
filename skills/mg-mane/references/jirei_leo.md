@@ -146,9 +146,13 @@
 - 記事の決まり：効果音は「大事な所だけ・大きくせん・絵とけんかさせん」・全部付けた後で聞き直して浮いた音を消す
 
 ## 3. 音
-- 曲の速さ（beat_track の目安）：Based 約 108・JetBit 約 140・Totalis 約 132・Cero 約 161。本人の決まりは「115–123 BPM＝エリート」（記事）
-- 音と絵の差（av_sync.py＝動きの始まりと強い鳴り始め・±80ms 内）：Cero 中央 −25.8ms（絵が先 16・音が先 10）。🔴 曲の鳴り始めが 0.15 秒おきにあるので偶然の組が混ざる＝参考の値
-- 効果音だけの版（fomo「SFX Only」・Based「Exploring sound design」）がある＝音の付け方の手本（測りは 技の棚.md の音の段）
+- **leo の音の作り方の実物（FL Studio の画面・~/research/mg-sekai-20261104/leomeethewoo/article/sound_design_daw_pear.jpg・Pear の作り方のスレッド「4. Sound design」）**：
+  - 曲＝Epidemic Sound「ES_Ain't Enough – West & Zander」・プロジェクトの速さ 130 BPM・曲の段は −9.1dB・最後に EQ の自動化で音量を上げる（締めで曲を持ち上げる）
+  - 効果音＝Epidemic の UI 系（ES_User Interface・ES_Scifi Computer・ES_Games Video・ES_Communication・ES_Mechanical・ES_Pen Retract）と「Clicks」「CLICKS 2」の束＋iPhone の画面収録の音（IPHONE…）。**−3.8〜−11.1dB で 5〜7 本の段に分けて重ねる**。クリックの段は曲の拍の網の上に細かく並ぶ
+  - ＝うちの決まり（効果音は Epidemic だけ・feedback_sfx_epidemic_only_mg_waku）と同じ道。曲も Epidemic で揃えてええ
+- 効果音だけの版（fomo「SFX Only」id 2114794892681777373・32 秒）：鳴り始め 37 個（3 秒に 3.45 個）・**間隔の中央 0.256 秒＝曲の速さ 117.5 BPM（beat_track の目安）の 8 分音符**・アタック（鳴り始め→山）中央 7.0ms＝鋭いクリック系。BMW（117.5 BPM・裏拍 255ms）と同じ網
+- 曲の速さ（beat_track の目安）：Based 約 108・JetBit 約 140・Totalis 約 132・Cero 約 161・fomo の音の作り方（Nov 2）約 115。本人の決まりは「115–123 BPM＝エリート」（記事）
+- 音と絵の差（tools/av_sync.py＝動きの始まりと強い鳴り始めの ±80ms 内・中央）：Cero −25.8ms（絵が先 16・音が先 10）／Summer Showreel −3.6ms（21・15）／fomo の音の作り方 +16.9ms（音が先 7・絵が先 2）／Based +34ms（音が先 7・絵が先 4）／JetBit +48ms（3 組だけ）。🔴 曲の鳴り始めが 0.15〜0.26 秒おきに並ぶので偶然の組が混ざる＝「大きな動きは曲の打ちに ±50ms で乗る」までが言える線。音先か絵先かは手本ごとに違う（me_mimi.md の決まり＝絵が先 を優先）
 
 ## 4. B 案（決め3）で使う所（leo から借りる）
 | 決め3 の場面 | leo の技 |
