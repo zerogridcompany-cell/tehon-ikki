@@ -52,7 +52,7 @@ description: 手本のモーショングラフィックス広告（UI が動く�
 - **確かめる**：`python3 assets/waza20/ken.py <All20.mp4> <出す所>`（手本の keys｜うち 15 コマおき）・`ugoki.py`（動きの量の比）。手本の札＝`assets/waza20/tehon/`
 
 - 🔒 11/4 追加（手数）：**アプリ UI の MG の技 8 つ**（光の筋→リングのロゴ・入力バー・色の丸の切り替え・計器の数字・ドロップダウン・横ブラーの切り替え・札の出方・ロゴへの収束＝曲の裏拍に ±20ms で置く）＝`references/jirei_bmw.md`（手本 @tonytuyisenge の BMW M・時刻は pts）。
-- 🔒 11/4 追加（世界の MG）：**手本の人 @leomeethewoo の技 20（工程の帯 Hook→Trigger→Result→Switch→Outro・黒か白＋1 色・語のスロット・1 語だけ色・数字は全部回す・暗い UI の斜めのマクロ・形の中継・色一面／円／階段の帯のワイプ・光る弧・効果音 7 種）＝`references/jirei_leo.md`（一番上に読む）**／世界の製品フィルム 12 本（Framer・Raycast・Samsung・Vercel・Linear・Apple Air・Dia・Bohdan・Nothing・tony 2 本・Cursor）＝`references/jirei_sekai_*.md`・種類別の棚＝~/research/mg-sekai-20261104/技の棚.md
+- 🔒 11/4 追加（世界の MG）：**手本の人 @leomeethewoo の技 22（工程の帯 Hook→Trigger→Result→Switch→Outro・黒か白＋1 色・語のスロット・1 語だけ色・数字は全部回す・暗い UI の斜めのマクロ・形の中継・色一面／円／階段の帯のワイプ・光る弧・効果音 7 種）＝`references/jirei_leo.md`（一番上に読む）**／世界の製品フィルム 12 本（Framer・Raycast・Samsung・Vercel・Linear・Apple Air・Dia・Bohdan・Nothing・tony 2 本・Cursor）＝`references/jirei_sekai_*.md`・種類別の棚＝~/research/mg-sekai-20261104/技の棚.md
 - 🔒 11/4 追加：**白い UI の規格**（余白 6/16/24 の階段・影 2 枚重ね・pill ボタン・札・エラー・手書きの注＝@ux_snacks の 5 つの決まり）＝`references/ui_kihon.md`。
 
 ## 一本道（入口 `M=~/.claude/skills/mg-mane/scripts/mg_mane.sh`）

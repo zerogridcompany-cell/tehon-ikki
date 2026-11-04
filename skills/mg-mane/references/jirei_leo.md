@@ -1,7 +1,7 @@
 # 手本の人 @leomeethewoo（leo・Intently スタジオ）の技（11/4 依頼者「絶対参考になる。MG に関しては全部目を通して自分の物にしてほしい」）
 
 - 人＝X @leomeethewoo（〈URL〉 1.1 万・FinTech の発売動画のスタジオ @IntentlyBiz（intently.agency）。取引先＝Polymarket・Trust Wallet・fomo・PrizePicks・Based・JTX・Jetbit・Cero・Pear・Totalis 等
-- 集めた物＝~/research/mg-sekai-20261104/leomeethewoo/（media_all.json＝動画つき投稿 467 件の id・日付・再生・いいね・本文／v/＝動画 405 本 2.6GB／uniq.json＝同じ動画の重複を除いた 341 本／an/<id>/＝測り（sokutei.json・frames.json・montage_*.jpg＝2 コマ/秒）／sheets/＝全部の動画を 2 コマ/秒の小札で並べた一覧／notes_leo.md＝見た記録／article/＝本人の記事 3 本の全文）
+- 集めた物＝~/research/mg-sekai-20261104/leomeethewoo/（media_all.json＝本人の画像・動画つき投稿 802 件（2024-01〜2026-11）の id・日付・再生・いいね・本文＝表は 投稿の表.md／v/＝動画 715 本 2.9GB（Drive へ移したら drive-fetch）／uniq.json＝同じ動画の重複を除いた 564 本（sheets の #番号は 1 周目の 341 本＝uniq_first.json の順位・sheet_old_*＝2024 前半の 223 本）／an/<id>/＝測り（sokutei.json・frames.json・montage_*.jpg＝2 コマ/秒）／sheets/＝全部の動画を 2 コマ/秒の小札で並べた一覧／notes_leo.md＝見た記録／article/＝本人の記事 3 本の全文）
 - 出所は全部未承認（X の投稿・記事）。数字は「測った値（frames.json・oto_ms）」と「montage を目で見た値（0.5 秒刻み）」を分けて書く
 - 🔴 2024〜2025 前半の投稿（IG の動画の作り直し・縦の人の語り）は本人の練習期＝手本にせん。**手本は 2026 の FinTech の発売動画**（Cero・Based V3・JetBit・JTX・fomo・Totalis・Pear・Involio・PrizePicks・TradeFox・EthenaPay）
 
@@ -92,7 +92,7 @@
 ### G. Intently「Showreel 2026」（id 2068371081766010988・39.2 秒）
 - 白地「SHOWREEL」コンデンスの太字が 3 段で大きくなる＋四隅に雑誌のような小さい情報の字（INTENTLY／Feb–Jun／2026／40+ videos produced）→作品を 0.5〜1 秒ごと（動きの山 51 個＝3 秒に 3.9 回・中央 0.65 秒）：カード 4 枚の 3D・青空に 3D のコインが降る中のスマホ・Confirm をカーソルが押す・**草原の中のブラウン管**・**光沢の 3D の絵文字に囲まれた UI**・**金の光の筋の回路の道（ワープ）と金の縁のチップ**・F1・「YOUR→YOUR TERMINAL→UPGRADED」・黒いクロームの 3D のロゴ・回路の分岐の図の上を白い点が走る「From Signal → To Launch」・**黒い金庫の扉が開いて青い光のコイン「100% CASHBACK」**・台座の金のロゴにスポットライト・実写（スタジアム・光るトロフィー）
 
-## 2. leo の技（名前つき 20）
+## 2. leo の技（名前つき 22）
 ### L01 Thin type, big stage（細い小さい字・広い余白）
 - 字は細めのサンセリフ・画面の高さの 2.5〜4%・中央・白（黒地）か黒（白地）。1 画面 1 文
 - Remotion：`fontWeight 400〜500・fontSize = H*0.03`。字の出入りは opacity＋blur 6→0（250〜400ms・EASE.out）
@@ -144,6 +144,13 @@
 ### L20 SFX seven（効果音は 7 種だけ）
 - クリック（mac keyboard・button click・switch click）・ウーシュ（Whoosh Main・Whoosh Main 2）・数字の回る音（Digital Counting）・シャッター（Camera Shutters）・ライザー（Riser Intense）・ブーム（Cinematic Boom・boom soft）・インパクト（impact 1）＋Singularity（吸い込み）
 - 記事の決まり：効果音は「大事な所だけ・大きくせん・絵とけんかさせん」・全部付けた後で聞き直して浮いた音を消す
+
+### L21 Cinematic light source（本人の作り方のスレッド 2024-03-26・id 1772706976172048820）
+- ①光の元＝四角か丸の形 ②形に Gaussian Blur＋Glow ③Glow の半径を wiggle で揺らし、Glow をもう 1 枚重ねて半径 1000（＝**芯＋長い裾の 2 段**・hikari.md と同じ答え） ④新しい層に CC Spotlight で光の筋（ライトトラック）
+- Remotion：芯＝`filter: blur(2px)`＋小さい drop-shadow／裾＝同じ形を `blur(60〜120px)` で opacity .35 を screen 合成・裾の半径を `1+0.04*noise(f/12)` で揺らす（wiggle）／光の筋＝細長い linear-gradient を回して screen
+### L22 Smoothest motion（本人の作り方のスレッド 2024-04-08・id 1777410566870417631）
+- ①物を置いて鍵を打つ ②全部の鍵を Easy Ease ③速さのグラフを「よく使う形」に直す（最初速く後ゆっくり） ④モーションブラーを足す
+- Remotion：easing.md の `EASE.out`（bezier 0.16,1,0.3,1）・`@remotion/motion-blur` の CameraMotionBlur（samples 8〜10）か、動く向きだけの SVG blur（jirei_bmw 技⑥）
 
 ## 3. 音
 - **leo の音の作り方の実物（FL Studio の画面・~/research/mg-sekai-20261104/leomeethewoo/article/sound_design_daw_pear.jpg・Pear の作り方のスレッド「4. Sound design」）**：
