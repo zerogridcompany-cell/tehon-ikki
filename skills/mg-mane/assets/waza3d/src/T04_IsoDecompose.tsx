@@ -3,7 +3,7 @@
 // カメラは 1 軸（ゆっくり寄る）。板は ease out で 6 コマずつ遅れて着地・影は高さでぼける。
 import React from 'react';
 import {AbsoluteFill, Img, staticFile, useCurrentFrame} from 'remotion';
-import {E, FONT, GRAIN, clamp01, lerp, tw} from './lib';
+import {E, FONT, GRAIN, clamp01, lerp, tw, breathe} from './lib';
 
 export type T04Region = {x: number; y: number; w: number; h: number; color: string; label: string; value: string};
 export type T04Props = {accent: string; title: string; rows: {name: string; img: string; price: string; sold: string; rating: string}[]; regions: T04Region[]; bg: string};
@@ -55,7 +55,7 @@ const Doc: React.FC<{p: T04Props}> = ({p}) => (
 export const T04_IsoDecompose: React.FC<Partial<T04Props>> = (props) => {
   const p = {...t04Defaults, ...props};
   const f = useCurrentFrame();
-  const cam = tw(f, -40, 130, E.linear);
+  const cam = tw(f, -30, 100, E.linear);
   const scan = tw(f, -4, 40, E.inout); // 走査 0→1
   const scanX = lerp(-40, DW + 40, scan);
   return (
@@ -66,7 +66,7 @@ export const T04_IsoDecompose: React.FC<Partial<T04Props>> = (props) => {
       <AbsoluteFill style={{background: 'radial-gradient(circle 900px at 40% 20%, rgba(255,255,255,.55) 0, rgba(255,255,255,.15) 45%, transparent 100%)'}} />
       <AbsoluteFill style={{perspective: 3200, perspectiveOrigin: '50% 40%'}}>
         <div style={{position: 'absolute', left: 960 - DW / 2 - 150, top: 640 - DH / 2, width: DW, height: DH, transformStyle: 'preserve-3d',
-          transform: `scale(${lerp(1.02, 1.12, cam)}) rotateX(56deg) rotateZ(${lerp(-42, -35, cam)}deg)`}}>
+          transform: `scale(${lerp(0.98, 1.16, cam)}) rotateX(56deg) rotateZ(${lerp(-45, -33, cam)}deg)`}}>
           {/* 表の落ち影（床に） */}
           <div style={{position: 'absolute', inset: 0, borderRadius: 14, background: 'rgba(40,60,110,.28)', filter: 'blur(22px)', transform: 'translate3d(10px,18px,-2px)'}} />
           <Doc p={p} />
@@ -83,9 +83,10 @@ export const T04_IsoDecompose: React.FC<Partial<T04Props>> = (props) => {
           {p.regions.map((r, i) => {
             const k = tw(f, 34 + i * 6, 64 + i * 6, E.out);
             const m = tw(f, 40 + i * 6, 76 + i * 6, E.out);
-            const z = lerp(0, 150 + i * 34, k);
-            const tx = lerp(0, 900 - r.x + i * 8, m), ty = lerp(0, -210 + i * 116 - r.y + 84, m);
-            const w = lerp(r.w, 220, m), h = lerp(r.h, 96, m);
+            const z = lerp(0, 150 + i * 34, k) + 0;
+            const tx = lerp(0, 860 - r.x + i * 46, m), ty = lerp(0, -170 + i * 196 - r.y + 84, m);
+            const w = lerp(r.w, 308, m), h = lerp(r.h, 134, m);
+            const bob = breathe(f, 6, 70, i * 1.1) * m;
             const lab = tw(f, 60 + i * 6, 76 + i * 6, E.out);
             return (
               <React.Fragment key={i}>
@@ -93,12 +94,21 @@ export const T04_IsoDecompose: React.FC<Partial<T04Props>> = (props) => {
                 <div style={{position: 'absolute', left: r.x + tx, top: r.y + ty, width: w, height: h, borderRadius: 10, background: 'rgba(30,50,110,.35)', filter: `blur(${4 + z * 0.12}px)`,
                   opacity: k * lerp(0.9, 0.45, z / 280), transform: `translate3d(${z * 0.18}px, ${z * 0.28}px, 2px)`}} />
                 {/* つなぎの線（床の上の点線） */}
-                <div style={{position: 'absolute', left: r.x + r.w / 2, top: r.y + 30, width: Math.hypot(tx, ty) * m, height: 0, borderTop: `2px dashed ${r.color}aa`, transformOrigin: '0 0',
-                  transform: `translateZ(2px) rotate(${Math.atan2(ty, tx)}rad)`, opacity: m > 0.02 ? 0.9 : 0}} />
-                <div style={{position: 'absolute', left: r.x + tx, top: r.y + ty, width: w, height: h, borderRadius: 10, transform: `translateZ(${z}px)`, opacity: k > 0 ? 1 : 0,
+                {(() => { const x0 = r.x + r.w / 2, y0 = r.y + 30, x1 = r.x + tx + 30, y1 = r.y + ty + h - 14; const L = Math.hypot(x1 - x0, y1 - y0) * m;
+                  const dot = (((f - 40 - i * 6) / 26) % 1 + 1) % 1; const glowS = {background: `linear-gradient(90deg, ${r.color}44, ${r.color}ee)`, boxShadow: `0 0 6px ${r.color}, 0 0 18px ${r.color}99`};
+                  return (<>
+                  {/* 床の上の光る線（領域→札の足元） */}
+                  <div style={{position: 'absolute', left: x0, top: y0, width: L, height: 3, borderRadius: 2, transformOrigin: '0 50%', opacity: m > 0.02 ? 1 : 0, transform: `translateZ(2px) rotate(${Math.atan2(y1 - y0, x1 - x0)}rad)`, ...glowS}}>
+                    <div style={{position: 'absolute', left: `${dot * 100}%`, top: -3, width: 9, height: 9, borderRadius: 5, background: '#fff', boxShadow: `0 0 10px 3px ${r.color}`, opacity: f > 44 + i * 6 ? 1 : 0}} />
+                  </div>
+                  {/* 足元から札へ立つ光の柱 */}
+                  <div style={{position: 'absolute', left: x0 + (x1 - x0) * m, top: y0 + (y1 - y0) * m, width: 3, height: z + bob, transformOrigin: '50% 0', opacity: m > 0.6 ? (m - 0.6) / 0.4 : 0,
+                    transform: 'translateZ(2px) rotateX(90deg)', background: `linear-gradient(180deg, ${r.color}ee, ${r.color}55)`, boxShadow: `0 0 8px ${r.color}`}} />
+                  </>); })()}
+                <div style={{position: 'absolute', left: r.x + tx, top: r.y + ty, width: w, height: h, borderRadius: 10, transform: `translateZ(${z + bob}px)`, opacity: k > 0 ? 1 : 0,
                   background: `linear-gradient(160deg, ${r.color}${Math.round(lerp(0x55, 0xee, m)).toString(16)}, ${r.color}${Math.round(lerp(0x30, 0xc8, m)).toString(16)})`, backdropFilter: 'blur(2px)', boxShadow: `inset 0 1.5px 0 rgba(255,255,255,.55), 0 0 0 1px ${r.color}`, fontFamily: FONT, color: '#fff', overflow: 'hidden'}}>
-                  <div style={{position: 'absolute', left: 18, top: 16, fontSize: 15, fontWeight: 500, opacity: 0.85 * lab}}>{r.label}</div>
-                  <div style={{position: 'absolute', left: 18, top: 40, fontSize: 30, fontWeight: 600, letterSpacing: '-0.01em', opacity: lab, transform: `translateY(${lerp(10, 0, lab)}px)`}}>{r.value}</div>
+                  <div style={{position: 'absolute', left: 24, top: 18, fontSize: 24, fontWeight: 600, opacity: 0.92 * lab}}>{r.label}</div>
+                  <div style={{position: 'absolute', left: 24, top: 52, fontSize: 48, fontWeight: 700, letterSpacing: '-0.015em', opacity: lab, transform: `translateY(${lerp(12, 0, lab)}px)`}}>{r.value}</div>
                 </div>
               </React.Fragment>
             );

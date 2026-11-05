@@ -1,5 +1,5 @@
 # waza3d（MG の手札＝空間の部品・道 A＝CSS 3D／道 B＝@remotion/three）
-- 部品：src/T01_ZoomThroughScreen・T02_GlassCardsCursor・T03_FloatingUI・T04_IsoDecompose・T05_IconCloud（各 1 つで完結・props で色・字・絵を替える・絵は staticFile の名前か URL）
+- 部品（T01・T02＝道 B three／T03・T04・T05＝道 A）：src/T01_ZoomThroughScreen・T02_GlassCardsCursor・T03_FloatingUI・T04_IsoDecompose・T05_IconCloud（各 1 つで完結・props で色・字・絵を替える・絵は staticFile の名前か URL）
 - 共通：src/lib.ts（役→曲線＝easing.md・tw・logLerp・息・粒）
 - 見本：`tools/render_all.sh`（Root.tsx の 5 本・1920x1080・30fps・3 秒）→ out/T0N.mp4
 - 比べ：`tools/vs.sh ref/T0N_ref.mp4 out/T0N.mp4 out/T0N_vs.jpg`／測り：`/usr/bin/python3 tools/sokutei.py <手本> <うち> <json>`
