@@ -147,3 +147,6 @@ tehonI は回1（構成）→回2（カメラの量）→回3（細部・地下�
 ## 重さと片付け
 - 重い作業の前に `run.sh guard`。書き出しは `--concurrency=3`。miru は 12.65秒の手本で約1分半・hakaru は約5秒
 - 終わったら `~/bin/drive-offload --path <作業>/zukan/cache`（と落とした素材）。自分で開いたタブは閉じる
+
+## 🔒11/7 字の出し方＝motion-cm の 5 型＋moji_lint.py（Remotion 臭 3 回目の門）
+手本の MG の字を写す時も、字の部品は motion-cm の 5 型（leo／type／cut／gray／shime）で組み、`motion-cm/scripts/moji_lint.py` が 🟢 になってから見せる。手本の字の数字（語間 ms・止まり ms・漂い px/s）は `motion-cm/scripts/moji_gate.py` で測って events.json→同じ列で並べる（telop_sekai/まとめ.md §2.5・§5.5）。
