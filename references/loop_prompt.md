@@ -20,7 +20,7 @@
 ## 手本ごとに 決め.md で切り替わる事
 - **実写の埋め方**：決め.md のとおり。例＝r2「元の映像を探すだけ（find_sources→hires→fit_all）・Kling は使わん」／51「本人が映らん実写は Codex の描き直し＋手本の動き」。本人が映る実写は描き直さん。決め.md に無ければ決めずに、その場面は今のまま置いて DONE に「決め.md に実写の埋め方が無い」と書く
 - **実写の元探し（段2a）は `/jissha-sagashi` の一本道で、係を自分で出す**（10/26 依頼者「r2 も自走に乗せる」）：①find_sources（題名）→ ②系統ごとに長尺を落として `scan_long.py --only <黒いカット>` → ③モンタージュは `perframe.py` → ④X（fxtwitter）・TikTok（yt-dlp 一覧）→ ⑤素材パック（scenepack）・同じ映像を使う他の edit。係は同時4体まで・指示の型＝`~/.claude/skills/jissha-sagashi/references/kakari_shiji_rei.md`。○は必ず並べた絵を目で見る（字幕の文字の偽○・同じ収録の別の秒は×）
-- **人が出ん実写で元が無い物**は `references/seisei_umeru.md`（ref_look→指示文→撃つ前の照合→見積もりを DONE に書いて止まる＝撃つのは本人の「作って」の後）
+- **人が出ん実写で元が無い物**は `references/seisei_umeru.md`（ref_look→指示文→撃つ前の照合→見積もりを DONE に書く＝撃つのは本人が頼んだら確認なしで）
 - **有料の生成（Kling・Higgsfield・Seedance 等）は、決め.md に許可が書いてある物だけ**。書いてなければ撃たず、見積もり.md に「秒・何を・モデル・長さ・クレジット・指示文」を書くだけ
 - 書体の候補・粒の有り無し・尺など、決め.md にある数字はそのまま使う
 
