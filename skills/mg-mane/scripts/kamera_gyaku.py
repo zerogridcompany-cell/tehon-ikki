@@ -1,4 +1,4 @@
-# カメラの逆算（カットごと）＝ 2 コマおきに前のコマと特徴点を合わせ（ORB＋RANSAC の相似変換）、カットの頭からの寄り(倍)・流し(px)・回り(度)を積む
+# カメラの逆算（カットごと）＝ 2 コマおきに「頭（f0+4）のコマ」へ直接合わせる（ORB＋比の検定＋RANSAC の相似）。合わん時だけ前のコマから積む（積み上げだけだと寄りが 4 割小さく出た＝11/24 実測）
 # 使い方: python3 kamera_gyaku.py <動画> <切り替えの表 json [[名,頭のコマ],…]> <出力 json> [見出しの帯=0.16]
 # 出力: {名: {"f0":頭, "f1":終わり, "k":[[コマ, 倍, x流し(1920px), y流し(1080px), 回り度, 合った点の数], …]}}
 #   ※ 倍・流しは「頭のコマの画面中心」を基準にした相似変換（p_t = s·R·(p_0 − c) + c + T）
@@ -24,14 +24,20 @@ def step(a, b):
 OUT = {}
 for i, (nm, f0) in enumerate(CUTS):
     f1 = CUTS[i + 1][1] if i + 1 < len(CUTS) else N
-    a0 = f0 + 4; acc = np.eye(3); K = [[a0, 1.0, 0.0, 0.0, 0.0, 0]]
+    # 頭（f0+4）のコマに直接合わせる（積み上げはずれが溜まって寄りが 4 割ほど小さく出た＝11/24 実測）。合わん所だけ前のコマから積む
+    a0 = f0 + 4; K = [[a0, 1.0, 0.0, 0.0, 0.0, 0]]; acc = np.eye(3); prev = a0
     for f in range(a0 + 2, f1 - 1, 2):
-        M, n = step(G[f - 2], G[f])
-        if M is None or n < 12: M = np.eye(3)
-        s = np.hypot(M[0, 0], M[1, 0])
-        cm = M @ np.array([W / 2, H / 2, 1]) - np.array([W / 2, H / 2, 1])
-        if abs(s - 1) > 0.06 or abs(cm[0]) > 12 or abs(cm[1]) > 12: M = np.eye(3)  # 物の動きに引っぱられた跳びは捨てる
-        acc = M @ acc; s = float(np.hypot(acc[0, 0], acc[1, 0])); r = float(np.degrees(np.arctan2(acc[1, 0], acc[0, 0])))
+        M, n = step(G[a0], G[f])
+        if M is not None and n >= 40 and abs(np.hypot(M[0, 0], M[1, 0]) - 1) < 0.25:
+            acc = M
+        else:
+            M2, n2 = step(G[prev], G[f])
+            if M2 is not None and n2 >= 12:
+                cm = M2 @ np.array([W / 2, H / 2, 1]) - np.array([W / 2, H / 2, 1])
+                if abs(np.hypot(M2[0, 0], M2[1, 0]) - 1) <= 0.06 and abs(cm[0]) <= 12 and abs(cm[1]) <= 12: acc = M2 @ acc
+            n = n2 if M2 is not None else 0
+        prev = f
+        s = float(np.hypot(acc[0, 0], acc[1, 0])); r = float(np.degrees(np.arctan2(acc[1, 0], acc[0, 0])))
         c = np.array([W / 2, H / 2, 1]); mv = acc @ c - c
         K.append([f, round(s, 4), round(float(mv[0]) * 2, 1), round(float(mv[1]) * 2, 1), round(r, 2), n])
     OUT[nm] = dict(f0=f0, f1=f1, k=K)

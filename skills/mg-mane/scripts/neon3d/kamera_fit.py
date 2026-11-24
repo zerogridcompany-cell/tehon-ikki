@@ -29,9 +29,19 @@ def xcorr(A, B):
     if iy > h: iy -= 2 * h
     if ix > w: ix -= 2 * w
     return v, ix, iy
+VID = {}
+if d.endswith('.mp4'):   # うちの書き出した動画（字幕・見出しつき）＝手本の秒→うちの秒の地図（rikai/ref2out_sec.json）で引く
+    R2O = json.load(open('rikai/ref2out_sec.json')); idx = {f: int(round(R2O[min(len(R2O) - 1, f)] * 60)) for f in fs}
+    cap2 = cv2.VideoCapture(d); want2 = set(idx.values()); g2 = {}; n2 = 0
+    while len(g2) < len(want2):
+        ok, fr = cap2.read()
+        if not ok: break
+        if n2 in want2: g2[n2] = fr
+        n2 += 1
+    VID = {f: g2.get(i) for f, i in idx.items()}
 res = []
 for f in fs:
-    u = cv2.imread(f'{d}/u{f:05d}.png')
+    u = VID.get(f) if VID else cv2.imread(f'{d}/u{f:05d}.png')
     if u is None or f not in got: continue
     A = emap(got[f], 0.16); B0 = emap(u, 0.16); nA = np.linalg.norm(A)
     best = None
