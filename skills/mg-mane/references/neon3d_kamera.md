@@ -54,7 +54,7 @@
 
 ## 9. 3周目：車を無料3D素材から線画にする（goat 11/26・mini・v9b→v12）
 元＝~/research/tehon-me/goat-mercedes/rikai/waza_kuruma.md・道具＝goat-mercedes/tools/kuruma_export.py（Blender→輪郭＋折れ目＋黒い中身）・proj/src/rg/kuruma.tsx
-## 決まり（数字つき）
+### 決まり（数字つき）
 1. **素材は形で選ぶ。名前で選ばん**：手本の車種そのものは無料の棚に無いことが多い（C クラスは無かった）。横顔（段のトランクか・屋根の流れ）・上から・後ろの 3 つで近い物を選び、**顔（グリル・星・ライト）だけ自作の線で付け替える**。比べ方＝`tools/kuruma_hikaku.py`（Blender の Freestyle で輪郭＋折れ目を手本の 4 角度で描く・1 台 約 1 分）。🔴 素材の「前」の向きはバラバラ（今回 5 台中 4 台が −Y・1 台が −X）＝1 回描いて確かめる
 2. **書き出し＝`tools/kuruma_export.py <blend> -- <出す所> <前の向き> <角度> <subsurf>`**（Blender --background・17 秒）→ `car.bin`（Float32/Uint32）＋`car.json`（範囲）
    - 部品分け：名前で body（水色）・red（尾灯）・lamp（前照灯のガラス）・wheel（タイヤ・ホイール＝4 つの中心に分けて車輪の中心からの座標）・caliper（赤・回さん）。室内・ロゴ・グリル・ライトの中身・ブレーキの円盤は捨てる（139 個→39 個）
@@ -71,16 +71,16 @@
 7. **カメラ**：静止画 3 枚（RefBare）×鍵 4〜6 通りで kamera_fit の重なりを並べて選ぶ（`tools/kamera_try16.py`・1 通り 約 25 秒）。🔴 重なりの点だけ追うと「床すれすれの横顔」が点で勝った＝必ず目で並べて見る。向き（どの角から・目線の高さ）は目で決め、大きさとずれは corr（corr_make→st_loop→corr_pick）で詰める
 8. 読み込み：`staticFile('kuruma/car.bin')` を fetch・`delayRender` で待つ。🔴 Canvas の中の部品だけで待つと 1 枚目に間に合わん（車が 0 台の静止画が出た）＝**Canvas の外（Rg 本体）で読み終わるまで ThreeCanvas を出さん**
 
-## 数字（goat-mercedes）
+### 数字（goat-mercedes）
 - 素材 24MB（.blend 1K）→ car.bin 11.7MB（車体 輪郭候補 12.5 万・いつもの線 1.5 万・黒い中身 7.3 万頂点／車輪 1 つ 輪郭 0.7 万・線 0.18 万）
 - 重なり（静止画 58 コマ・kamera_fit）：全体の中央 v9b 0.397 → 0.404・車の場面 37 コマの中央 0.391 → 0.405／sabun2 の線の一致 F（車の場面の中央）0.52 → 0.556
 - S16 エンジン（50.75〜51.8）0.28 → 0.47〜0.58・S18 横顔（53.7）0.37 → 0.46・S8 0.52 → 0.61・S7 0.26 → 0.37
 
-## 道具の道
+### 道具の道
 - `tools/kuruma_hikaku.py`（素材を手本の角度で線画）・`tools/kuruma_inspect.py`（部品の名前・頂点数・箱）・`tools/kuruma_export.py`（線画データ）・`tools/kamera_try16.py`（1 場面の鍵を何通りも）・`tools/kuruma_seq.sh`（手本の秒で静止画→上 手本｜下 うち）
 - three 側：`proj/src/rg/kuruma.tsx`（useKuruma・SilGlow・Fill・KurumaBody）・`parts.tsx` の `Car`（旧は `CarV9`）・`geo.ts` の `mbFace`（メルセデスの顔）
 
-## ほかで使える場面
+### ほかで使える場面
 1. 実物の商品（給水器・家電・道具・家具）の「仕組みの線画」＝ BlenderKit／Sketchfab の素材を同じ書き出しで輪郭＋折れ目にして、中身（フィルター・モーター）を noDepth で透かして見せる
 2. 車・バイク・スニーカー・時計など「形が命」の物の写し＝手本の物そのものが無くても、近い形の素材＋顔（ロゴ・グリル・文字盤）だけ自作で差し替える
 3. 部屋・店の 3D 下書きを線画のカメラワークで見せる（blender-kit の家具を同じ書き出しで線にする・輪郭は毎コマ出るのでカメラが回っても崩れん）
